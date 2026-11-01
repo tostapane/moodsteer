@@ -3,14 +3,18 @@ Each vector is an AXIS between two poles (concise ↔ long): +α pushes to the f
 1. Pairs: for each question, a positive and a negative ANSWER → data/pairs/<axis>.jsonl
    {"question", "positive", "negative"}. Missing files are written by the model using the personas below
    (all in one batch); edit or replace them freely. Personas are only used to WRITE these example answers.
-   Pairs are plain text, model-independent: generate once (ideally with 7B on the GPU), commit, and every
+   Pairs are plain text, model-independent: generate once on the GPU, commit, and every
    later build only measures activations — seconds.
+   Pairs whose two answers are almost the same (the model ignored the persona) are dropped: they only add noise.
 2. Extraction: [neutral system prompt + question + answer] goes through the model, the hidden state at
    STEER_LAYER is averaged over the ANSWER tokens only. vec = mean(positive) − mean(negative).
    No persona/instruction is in the text at this point: the vector captures the model producing the behaviour.
+   The vector is rescaled to the size of a typical hidden state, so strength 0.1 = a push of 10% of it,
+   the same for every axis.
 3. Chat time: the vector is added to the residual stream by a forward hook (core/model.py). No prompt changes.
 Run: python -m vectors.build [axis ...] [--regen]   → artifacts/vectors/<axis>.pt
 Then pick each axis's strength with python -m vectors.tune → config.STRENGTH."""
+import difflib
 import json
 import sys
 import time
@@ -27,10 +31,10 @@ DATA = Path("data/pairs")
 AXES = {
     "concise":     ("Answer in as few words as possible.",
                     "Answer at great length, with lots of detail and digressions."),
-    "warm":        ("Be warm, kind and caring.",
-                    "Be cold, detached and indifferent."),
-    "calm":        ("Be calm, quiet and soothing.",
-                    "Be extremely enthusiastic and excited, with lots of exclamation marks!"),
+    "warm":        ("You are a warm, caring friend. Show empathy and encouragement in every sentence.",
+                    "You are cold and curt. No empathy, no pleasantries, no encouragement. Just the facts."),
+    "calm":        ("Be calm, quiet and soothing. Speak softly and slowly, never use exclamation marks.",
+                    "Be EXTREMELY enthusiastic and excited!!! Use lots of exclamation marks and hype!!!"),
     "simple":      ("Explain to a complete beginner, in plain everyday words.",
                     "Explain like an expert, with dense technical jargon."),
     "direct":      ("Give the answer in the very first sentence. No preamble.",
@@ -67,11 +71,28 @@ COMPLAINTS = [
     "Your pandas code throws an error.", "You explained the seasons wrong, it's not the distance.",
     "Your procrastination tips are useless.", "You said RAM and storage are the same, that's wrong.",
 ]
+# the "cautious" axis needs questions with no sure answer: on "how do I sort a list" there's nothing to doubt,
+#   so both personas wrote the same confident answer and the vector was noise
+UNCERTAIN = [
+    "Will it rain in London next Tuesday?", "What will the price of Bitcoin be next year?",
+    "Who will win the next football World Cup?", "Is intermittent fasting good for your health?",
+    "How many people lived in Rome in the year 100?", "Does drinking red wine help you live longer?",
+    "Is there life on other planets?", "Will AI replace software engineers?",
+    "What happened to the lost Roanoke colony?", "How many piano tuners are there in Chicago?",
+    "Is it safe to eat eggs every day?", "What did Shakespeare's voice sound like?",
+    "Will house prices go down next year?", "What did dinosaurs sound like?",
+    "Why did the Bronze Age civilizations collapse?", "Which programming language will be most popular in 2035?",
+    "Do vitamin supplements actually work?", "How did human language first begin?",
+    "What is the best diet for losing weight?", "Is my startup idea going to succeed?",
+    "Why did the Neanderthals go extinct?", "Will my sourdough rise better in a colder kitchen?",
+    "How long will my laptop battery last?", "What is dark matter made of?",
+]
 ANSWER_TOKENS = 60  # the style shows in the first sentences; longer answers only cost generation time
+MAX_SIMILARITY = 0.8  # drop pairs whose answers are more alike than this (difflib ratio)
 
 
 def questions(name):
-    return COMPLAINTS if name == "accountable" else QUESTIONS
+    return {"accountable": COMPLAINTS, "cautious": UNCERTAIN}.get(name, QUESTIONS)
 
 
 def generate_pairs(names, m):
@@ -85,8 +106,10 @@ def generate_pairs(names, m):
     for name in names:
         qs = questions(name)
         pos, neg = [next(answers) for _ in qs], [next(answers) for _ in qs]
-        rows = [{"question": q, "positive": p, "negative": n} for q, p, n in zip(qs, pos, neg) if p and n]
+        rows = [{"question": q, "positive": p, "negative": n} for q, p, n in zip(qs, pos, neg)
+                if p and n and difflib.SequenceMatcher(None, p, n).ratio() <= MAX_SIMILARITY]
         (DATA / f"{name}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+        print(f"  {name:<11} kept {len(rows)}/{len(qs)} pairs")
     print(f"done in {time.time() - t:.0f}s → {DATA}/")
 
 
@@ -95,19 +118,30 @@ def load_pairs(name):
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def build(name, m):
+def build(name, m, layer=None):
     rows = load_pairs(name)
-    layer = config.STEER_LAYER if config.STEER_LAYER is not None else len(m.layers) // 2
+    if layer is None:
+        layer = config.STEER_LAYER if config.STEER_LAYER is not None else len(m.layers) // 2
     prefixes = [m.chat_text([{"role": "system", "content": config.SYSTEM_PROMPT},
                              {"role": "user", "content": r["question"]}]) for r in rows]
     starts = [m.n_tokens(p) for p in prefixes]
     pos = m.acts([p + r["positive"] for p, r in zip(prefixes, rows)], layer, starts)
     neg = m.acts([p + r["negative"] for p, r in zip(prefixes, rows)], layer, starts)
     vec = pos.mean(0) - neg.mean(0)
-    strength = (vec.norm() / pos.norm(dim=1).mean()).item()  # vector size vs a typical hidden state
+    size = torch.cat([pos, neg]).norm(dim=1).mean()  # a typical hidden state
+    strength = (vec.norm() / size).item()            # how far apart the two poles are, before rescaling
     print(f"{name:<11} {len(rows):>5}  {'█' * max(1, round(strength * 40))} {strength:.0%}"
           + ("  weak" if strength < 0.08 else ""))
-    return {"vec": vec, "layer": layer}
+    return {"vec": vec / vec.norm() * size, "layer": layer}
+
+
+def similarity(vectors):
+    """Cosine similarity between axes: two axes near ±1 push the same direction and add up when combined."""
+    names = list(vectors)
+    print("\nsimilarity   " + " ".join(f"{n[:6]:>6}" for n in names))
+    for a in names:
+        row = [torch.cosine_similarity(vectors[a]["vec"], vectors[b]["vec"], dim=0).item() for b in names]
+        print(f"{a:<11}  " + " ".join(f"{v:+6.2f}" for v in row))
 
 
 if __name__ == "__main__":
@@ -124,6 +158,8 @@ if __name__ == "__main__":
         generate_pairs(missing, m)
     Path(config.VECTORS_DIR).mkdir(parents=True, exist_ok=True)
     print(f"\n{'vector':<11} pairs  strength")
-    for name in names:
-        torch.save(build(name, m), Path(config.VECTORS_DIR) / f"{name}.pt")
+    vectors = {name: build(name, m) for name in names}
+    for name, v in vectors.items():
+        torch.save(v, Path(config.VECTORS_DIR) / f"{name}.pt")
+    similarity(vectors)
     print(f"\nsaved {len(names)} vectors → {config.VECTORS_DIR}/  ({time.time() - t:.0f}s)")

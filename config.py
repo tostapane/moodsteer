@@ -1,9 +1,9 @@
 """Shared knobs. Everything reads from here."""
 import os
 
-MODEL_ID = os.getenv("MODEL_ID", "Qwen/Qwen2.5-7B-Instruct")
+MODEL_ID = os.getenv("MODEL_ID", "Qwen/Qwen2.5-3B-Instruct")  # the committed vectors are built for this model
 FAKE = os.getenv("FAKE") == "1"  # FAKE=1 → no GPU/torch, canned replies
-DTYPE = os.getenv("DTYPE", "bfloat16")  # float32 on CPU
+DTYPE = os.getenv("DTYPE", "float16")  # float16 works on a Colab T4; float32 on CPU
 PORT = int(os.getenv("PORT", "8000"))
 VECTORS_DIR = "artifacts/vectors"
 MOODS_FILE = "artifacts/moods.pt"
@@ -13,6 +13,7 @@ TRACE_FILE = "runs/trace.jsonl"
 
 SYSTEM_PROMPT = "You are a helpful assistant."
 MAX_NEW_TOKENS = 400
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))  # rows generated at once: bounds memory on long lists
 
 # step 2: the model reads the conversation and names ONE dominant mood + intensity 0-10 (→ 0..1).
 #   "probe" = experimental activation reader (needs detector/build.py), falls back to "llm".
@@ -41,8 +42,14 @@ MAPPING = {
     "skeptical":  {"cautious": 1.0},
 }
 
-# step 5: how hard each axis pushes at α = ±1 (multiplier on the vector). Pick values with: python -m vectors.tune
+# step 5: how hard each axis pushes at α = ±1, as a fraction of a typical hidden state (0.1 = 10%).
+#   Vectors are rescaled when built, so the same number means the same push on every axis.
+#   Pick values with: python -m vectors.tune, check them with: python -m eval.steer
+#   From eval.steer on 3B: concise 0.4 halves words with no fact loss (0.8 → 24/30 facts, 2.0 breaks the model);
+#   simple and calm keep gaining up to 0.8, but kept at 0.6 since a mood pushes 2-3 axes at once and they add up.
+#   cautious 0.4 hedges more with no fact loss; at 0.8 it doubts even plain facts (21/30).
+#   The others aren't measured yet (warm, direct, accountable need a judge).
 STRENGTH = {
-    "concise": 4.0, "warm": 4.0, "calm": 4.0, "simple": 4.0,
-    "direct": 4.0, "cautious": 4.0, "structured": 4.0, "accountable": 4.0,
+    "concise": 0.4, "warm": 0.3, "calm": 0.6, "simple": 0.6,
+    "direct": 0.3, "cautious": 0.4, "structured": 0.3, "accountable": 0.3,
 }

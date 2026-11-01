@@ -19,8 +19,9 @@ class FakeModel:
     def set_alphas(self, alphas):
         self.alphas = alphas
 
-    def generate(self, messages, max_new_tokens=None, on_token=None):
-        tag = ", ".join(f"{k}={v:.2f}" for k, v in self.alphas.items()) or "none"
+    def generate(self, messages, max_new_tokens=None, on_token=None, alphas=None):
+        alphas = self.alphas if alphas is None else alphas
+        tag = ", ".join(f"{k}={v:.2f}" for k, v in alphas.items()) or "none"
         reply = f"[fake | steering: {tag}] you said: {messages[-1]['content']}"
         for word in reply.split(" ") if on_token else []:
             time.sleep(0.02)
@@ -28,7 +29,8 @@ class FakeModel:
         return reply
 
     def generate_batch(self, convos, max_new_tokens=None):
-        return [self.generate(c) for c in convos]
+        rows = self.alphas if isinstance(self.alphas, list) else [self.alphas] * len(convos)
+        return [self.generate(c, alphas=a) for c, a in zip(convos, rows)]
 
     def acts(self, texts, layer=None, starts=None):
         return [[random.random() for _ in range(8)] for _ in texts]
@@ -60,7 +62,7 @@ class Model:
                                                           device_map="auto")
         self.layers = self.model.model.layers
         self.vectors = {p.stem: torch.load(p) for p in sorted(Path(config.VECTORS_DIR).glob("*.pt"))}
-        self.steer = {}  # layer index → tensor added to that layer's output
+        self.steer = {}  # layer index → Tensor[rows, d_model] added to that layer's output, one row per batch row
         for i, layer in enumerate(self.layers):
             layer.register_forward_hook(self._hook(i))
 
@@ -70,19 +72,22 @@ class Model:
             if v is None:
                 return None
             h = out[0] if isinstance(out, tuple) else out
-            h = h + v.to(h.device, h.dtype)
+            h = h + v[:, None, :].to(h.device, h.dtype)  # same vector on every token; 1 row = whole batch
             return (h,) + out[1:] if isinstance(out, tuple) else h
         return hook
 
     def set_alphas(self, alphas):
-        """alphas are -1..1 per axis (sign picks the pole), scaled by config.STRENGTH. Unknown axes are skipped."""
+        """alphas are -1..1 per axis (sign picks the pole), scaled by config.STRENGTH. Unknown axes are skipped.
+        A list of dicts steers each row of the next batch differently (one dict per conversation)."""
+        rows = alphas if isinstance(alphas, list) else [alphas]
         self.steer = {}
-        for name, a in alphas.items():
-            v = self.vectors.get(name)
-            if v is None or a == 0:
-                continue
-            add = a * config.STRENGTH.get(name, 4.0) * v["vec"]
-            self.steer[v["layer"]] = self.steer.get(v["layer"], 0) + add
+        for r, row in enumerate(rows):
+            for name, a in row.items():
+                v = self.vectors.get(name)
+                if v is None or a == 0:
+                    continue
+                add = self.steer.setdefault(v["layer"], self.torch.zeros(len(rows), v["vec"].shape[0]))
+                add[r] += a * config.STRENGTH.get(name, 0.1) * v["vec"]
 
     @contextmanager
     def unsteered(self):
@@ -120,6 +125,15 @@ class Model:
         return reply.strip()
 
     def generate_batch(self, convos, max_new_tokens=None):
+        """Runs in chunks of config.BATCH_SIZE to bound memory. Per-row steering follows its rows."""
+        steer, out, n = self.steer, [], config.BATCH_SIZE
+        for i in range(0, len(convos), n):
+            self.steer = {k: v[i:i + n] if len(v) == len(convos) else v for k, v in steer.items()}
+            out += self._generate(convos[i:i + n], max_new_tokens)
+        self.steer = steer
+        return out
+
+    def _generate(self, convos, max_new_tokens):
         enc = self.tok([self.chat_text(c) for c in convos], return_tensors="pt", padding=True,
                        add_special_tokens=False).to(self.model.device)
         with self.torch.no_grad():

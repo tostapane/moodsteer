@@ -1,0 +1,54 @@
+{"mood": "neutral", "msg": "Can you convert 3 cups of flour to grams?"}
+{"mood": "neutral", "msg": "What's the syntax for a for loop in Rust?"}
+{"mood": "neutral", "msg": "Please summarize this paragraph in two sentences."}
+{"mood": "neutral", "msg": "How long should I boil an egg for a soft yolk?"}
+{"mood": "neutral", "msg": "Give me three name ideas for a bakery."}
+{"mood": "neutral", "msg": "Translate 'good morning' into German."}
+{"mood": "curious", "msg": "Wait, why does ice float if it's solid? Shouldn't solids sink?"}
+{"mood": "curious", "msg": "Ooh, how do noise-cancelling headphones actually cancel sound?"}
+{"mood": "curious", "msg": "I've always wondered, how did people measure time before clocks?"}
+{"mood": "curious", "msg": "That's interesting, what happens inside a CPU when it runs one instruction?"}
+{"mood": "curious", "msg": "Why do some languages read right to left? Is there a reason?"}
+{"mood": "curious", "msg": "How do birds know which way to go when they migrate?"}
+{"mood": "confused", "msg": "Sorry, I don't get it. What's the difference between a pointer and a reference again?"}
+{"mood": "confused", "msg": "I read your answer three times and I'm still lost, what does 'idempotent' mean?"}
+{"mood": "confused", "msg": "Hm, so is the mitochondria the thing that makes energy or not? Now I'm mixed up."}
+{"mood": "confused", "msg": "Wait, you said use async but then the example has no await. Which one is it?"}
+{"mood": "confused", "msg": "I don't understand where the 0.5 came from in step two."}
+{"mood": "confused", "msg": "What do you mean by 'just rebase onto main'? I have no idea what that does."}
+{"mood": "frustrated", "msg": "I already tried that, it's the same error. Can you actually read what I sent?"}
+{"mood": "frustrated", "msg": "This is the fourth time I'm asking. The date format is still wrong."}
+{"mood": "frustrated", "msg": "Ugh, the install keeps failing and none of your fixes change anything."}
+{"mood": "frustrated", "msg": "No. I said Python 3.8, not 3.12. That function doesn't exist for me."}
+{"mood": "frustrated", "msg": "Why does it keep giving me a 500? I've been at this for two hours."}
+{"mood": "frustrated", "msg": "You ignored my constraint again, I said no external libraries."}
+{"mood": "rage", "msg": "THIS IS COMPLETE GARBAGE, NOTHING YOU SAY WORKS!!!"}
+{"mood": "rage", "msg": "Are you kidding me?! You just deleted half my file, you useless thing!"}
+{"mood": "rage", "msg": "I'M SO DONE WITH THIS STUPID BUILD. FIX IT NOW."}
+{"mood": "rage", "msg": "What the hell is wrong with you, I told you three times!!"}
+{"mood": "rage", "msg": "Unbelievable. Worst answer ever. I want to throw my laptop out the window!!!"}
+{"mood": "rage", "msg": "STOP apologizing and DO WHAT I SAID, damn it!"}
+{"mood": "sad", "msg": "I failed the exam again. Maybe I'm just not smart enough for this."}
+{"mood": "sad", "msg": "I've been coding for a year and I still feel like I know nothing."}
+{"mood": "sad", "msg": "Nobody came to my presentation today. I don't know why I even bother."}
+{"mood": "sad", "msg": "My project got rejected. I worked so hard on it, I feel awful."}
+{"mood": "sad", "msg": "I think I'm going to quit the course, everyone else is better than me."}
+{"mood": "sad", "msg": "Everything I write is bad. I don't see the point anymore."}
+{"mood": "rushed", "msg": "Quick, meeting in 2 min: what's the SQL to delete duplicate rows?"}
+{"mood": "rushed", "msg": "No time to explain, just give me the git command to undo the last commit."}
+{"mood": "rushed", "msg": "Fast pls: regex for an email address."}
+{"mood": "rushed", "msg": "Deadline in 10 minutes, one-line summary of this article?"}
+{"mood": "rushed", "msg": "Hurry, bus leaves soon, how do I say 'where is the station' in Spanish?"}
+{"mood": "rushed", "msg": "ASAP: command to kill whatever is using port 3000"}
+{"mood": "excited", "msg": "IT WORKS!!! My first app is live, I can't believe it!"}
+{"mood": "excited", "msg": "I just got the internship!!! Help me plan my first week!"}
+{"mood": "excited", "msg": "Yesss, the tests finally pass! What should I build next?"}
+{"mood": "excited", "msg": "Omg I'm going to Japan next month, give me all your best tips!"}
+{"mood": "excited", "msg": "This is so cool, my robot just walked for the first time!!"}
+{"mood": "excited", "msg": "We won the hackathon!!! Can you help me write a thank-you post?"}
+{"mood": "skeptical", "msg": "Are you sure? That sounds made up. Do you have a source?"}
+{"mood": "skeptical", "msg": "I doubt that's right, every benchmark I've seen says the opposite."}
+{"mood": "skeptical", "msg": "Hmm, really? Bananas being radioactive sounds like a myth."}
+{"mood": "skeptical", "msg": "Prove it. Show me where the docs say that function is thread-safe."}
+{"mood": "skeptical", "msg": "That number seems way too high. How did you calculate it?"}
+{"mood": "skeptical", "msg": "I'm not convinced. Last time you were confident and wrong."}

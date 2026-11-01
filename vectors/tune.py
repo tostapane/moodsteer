@@ -9,7 +9,7 @@ import config
 from core.model import get_model
 
 PROMPT = "My code throws a KeyError and I don't know why. What should I do?"
-MULTS = [2, 4, 6, 8]
+STRENGTHS = [0.1, 0.2, 0.4, 0.8]  # fraction of a typical hidden state
 
 
 def main():
@@ -28,18 +28,17 @@ def main():
     width = shutil.get_terminal_size((100, 24)).columns - 14
     msgs = [{"role": "system", "content": config.SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
 
-    def show(label, steer):
-        m.steer = steer
+    def show(label, alphas):
+        m.set_alphas(alphas)
         out = m.generate(msgs, max_new_tokens=80)
         print(f"  {label:<5} {len(out.split()):>3}w  {' '.join(out.split())[:width]}", flush=True)
 
     print(f"prompt: {prompt}\n")
-    show("×0", {})
+    show("0", {})
     for name in names:
-        v = m.vectors[name]
         print(f"\n{name} ({'−' if sign < 0 else '+'} pole) · config.STRENGTH = {config.STRENGTH.get(name)}")
-        for k in MULTS:
-            show(f"×{k}", {v["layer"]: sign * k * v["vec"]})
+        for s in STRENGTHS:
+            show(f"{s}", {name: sign * s / config.STRENGTH.get(name, 0.1)})
 
 
 if __name__ == "__main__":
