@@ -1,5 +1,5 @@
 """Terminal chat that shows every step live: mood detection, steering, streamed replies, status bar.
-Runs the whole pipeline in-process (no server needed).
+Runs the whole pipeline in-process.
   python cli.py                          # Qwen2.5-3B on GPU (override with MODEL_ID / DTYPE env vars)
   MODEL_ID=... python cli.py             # another model: rebuild the vectors for it first (python -m vectors.build)
   FAKE=1 python cli.py                   # no GPU, canned replies

@@ -1,11 +1,11 @@
-"""Build the mood probe: one direction per mood in the model's activation space.  Owner: P3.
+"""Build the mood probe: one direction per mood in the model's activation space.
 1. Examples: data/moods/<mood>.txt, one user message per line (neutral.txt = the baseline).
    Missing files are written by the model itself; edit, extend or replace them freely.
 2. Each message → hidden state at READ_LAYER averaged over all its tokens.
 3. direction(mood) = mean(mood messages) − mean(neutral messages), normalised.
    Calibration: lo = 90th percentile of neutral projections, hi = median projection of the mood's own messages.
 4. Every 5th example is held out and used to print accuracy.
-Run on the GPU box: python -m detector.build [--regen]   → artifacts/moods.pt. Restart the server afterwards."""
+Run: python -m detector.build [--regen]   → artifacts/moods.pt"""
 import re
 import sys
 from pathlib import Path

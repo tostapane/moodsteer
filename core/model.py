@@ -1,4 +1,4 @@
-"""Steps 5-6: load model, add steering vectors to activations, generate.  Owner: P1.
+"""Load the model, add steering vectors to its activations, generate.
 Vector file (artifacts/vectors/<axis>.pt): {"vec": Tensor[d_model], "layer": int}. Strength: config.STRENGTH."""
 import os
 import random

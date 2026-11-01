@@ -1,4 +1,4 @@
-"""Step 2: message → mood scores 0..1.  Owner: P3.
+"""Mood detection: message → mood scores 0..1.
 probe = project the model's activations, averaged over the whole user message, onto mood directions
         (built by detector/build.py). No generation, ~one forward pass.
 llm   = the model reads the conversation and names ONE dominant mood + intensity 0-10, as JSON.

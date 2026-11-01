@@ -1,4 +1,4 @@
-"""Steps 3-4: steering memory. One state per axis (-1..1, sign = pole) that persists across turns.  Owner: P1."""
+"""Steering memory. One state per axis (-1..1, sign = pole) that persists across turns."""
 import config
 
 

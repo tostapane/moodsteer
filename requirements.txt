@@ -1,4 +1,4 @@
-# GPU box (server + vectors). FAKE mode and tests need nothing.
+# GPU needed for the real model. FAKE=1 mode and tests/smoke.py need none of these.
 torch
 transformers>=4.56
 accelerate

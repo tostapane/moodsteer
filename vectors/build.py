@@ -1,4 +1,4 @@
-"""Build steering vectors with contrastive completions (CAA).  Owner: P2.
+"""Build steering vectors with contrastive completions (CAA).
 Each vector is an AXIS between two poles (concise ↔ long): +α pushes to the first pole, −α to the second.
 1. Pairs: for each question, a positive and a negative ANSWER → data/pairs/<axis>.jsonl
    {"question", "positive", "negative"}. Missing files are written by the model using the personas below

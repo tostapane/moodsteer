@@ -1,5 +1,5 @@
-"""Steps 1-7 for one turn.  Owner: P1.
-on_event(dict) gets live progress (used by the CLI):
+"""One turn: detect the mood, update the steering memory, reply steered (and unsteered with compare=True), log.
+on_event(dict) gets live progress (used by the CLI and the web demo):
   {"type": "stage", "stage": "detect" | "steered" | "baseline"}
   {"type": "detected", "scores", "alphas", "seconds"}   alphas = the steering state applied this turn
   {"type": "token", "stream": "steered" | "baseline", "text"}
@@ -25,15 +25,15 @@ def chat(session_id: str, msg: str, steer: bool = True, compare: bool = False, o
         t = time.time()
         s = SESSIONS.setdefault(session_id, {"history": [], "baseline_history": [], "state": {}, "n": 0})
         emit({"type": "stage", "stage": "detect"})
-        scores = detect(msg, s["history"])                     # 2
-        s["state"], s["n"] = update(s["state"], scores, s["n"])  # 3-4 (memory is kept even with steer off)
+        scores = detect(msg, s["history"])
+        s["state"], s["n"] = update(s["state"], scores, s["n"])  # memory is kept even with steer off
         alphas = dict(s["state"]) if steer else {}
         emit({"type": "detected", "scores": scores, "alphas": alphas, "seconds": time.time() - t})
-        out = {"reply": reply(s["history"], msg, alphas, "steered", emit),        # 5-6
+        out = {"reply": reply(s["history"], msg, alphas, "steered", emit),
                "scores": scores, "alphas": alphas}
         if compare:
             out["baseline"] = reply(s["baseline_history"], msg, {}, "baseline", emit)
-        log({"session_id": session_id, "steer": steer, "msg": msg, "latency": time.time() - t, **out})  # 7
+        log({"session_id": session_id, "steer": steer, "msg": msg, "latency": time.time() - t, **out})
         return out
 
 

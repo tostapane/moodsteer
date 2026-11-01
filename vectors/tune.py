@@ -1,4 +1,4 @@
-"""Show how each axis changes one reply as the strength grows, to pick config.STRENGTH.  Owner: P2.
+"""Show how each axis changes one reply as the strength grows, to pick config.STRENGTH.
 Run: python -m vectors.tune [axis ...] [--prompt "..."] [--neg]
   --neg  push toward the second pole (e.g. calm → enthusiastic)
 Read each axis top to bottom: pick the largest strength where the reply changed but is still good."""
