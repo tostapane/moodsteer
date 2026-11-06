@@ -1,0 +1,12 @@
+{"moods": ["rushed", "frustrated"], "msg": "This is the third wrong answer and my meeting starts in two minutes. Just give me the fix."}
+{"moods": ["rushed", "frustrated"], "msg": "Ugh, still broken and I have no time for this. One line, please."}
+{"moods": ["rushed", "confused"], "msg": "Deploy is in 5 minutes and I don't get what you meant by rebase. Quickly, what do I type?"}
+{"moods": ["rushed", "confused"], "msg": "I have to leave now but I didn't understand that at all. What does the error actually mean, fast?"}
+{"moods": ["sad", "frustrated"], "msg": "Nothing I try works. I keep failing at this and your answers aren't helping either."}
+{"moods": ["sad", "confused"], "msg": "I've read your explanation five times and still don't get it. Maybe I'm just too dumb for programming."}
+{"moods": ["curious", "excited"], "msg": "Wow, that's amazing! I love this! How does it actually work under the hood?"}
+{"moods": ["curious", "excited"], "msg": "This is so cool, it finally runs!! Why does adding an index make it that much faster?"}
+{"moods": ["curious", "skeptical"], "msg": "Interesting, but is that really true? How would anyone even measure that?"}
+{"moods": ["skeptical", "frustrated"], "msg": "You said that last time and it was wrong. Why should I believe you now? I'm tired of this."}
+{"moods": ["rage", "rushed"], "msg": "THIS IS GARBAGE!!! FIX IT RIGHT NOW I HAVE NO TIME FOR YOUR STUPID ESSAYS!!!"}
+{"moods": ["skeptical", "rushed"], "msg": "That doesn't sound right. Quick, give me a source, I need to decide in one minute."}

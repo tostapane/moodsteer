@@ -23,12 +23,11 @@ def meter(v, width=12):
 
 def panel(scores, alphas):
     """Two monospace tables: this message's mood, and the steering state per axis (signed)."""
-    top = max((m for m in scores if m != "neutral"), key=scores.get, default=None)
     mood = ["mood (this message)"]
     for m in config.MOODS:
         v = scores.get(m, 0.0)
         line = f"{m:<11} {meter(v)} {v:.2f}"
-        mood.append(f"<b style='color:#d97706'>{line}</b>" if m == top and v >= config.THRESHOLD else line)
+        mood.append(f"<b style='color:#d97706'>{line}</b>" if v >= config.THRESHOLD else line)
     state = ["steering state (− pole ← → + pole)"]
     for axis in config.STRENGTH:
         a = alphas.get(axis, 0.0)

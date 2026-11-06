@@ -57,10 +57,11 @@ Every reply behind these numbers is saved to `runs/` when you run the scripts.
 ## How it works
 
 Every turn:
-1. **Detect:** the model reads the conversation and names the user's dominant mood + intensity
-   (frustrated 6/10, confused 3/10, …).
-2. **Remember:** a per-axis steering state is updated: 100% the new mood on the first mood message, then 50%,
-   then 40% new / 60% memory. Neutral messages fade it slowly (×0.9).
+1. **Detect:** the model reads the conversation and lists the user's moods, each with an intensity
+   (frustrated 6/10 and rushed 8/10, …).
+2. **Remember:** a mood moves only the axes it lists, toward a target at its own speed:
+   `state += intensity × speed × (target − state)`. Very rushed jumps straight to short answers, curious eases them
+   a little, and a neutral message changes nothing.
 3. **Steer:** each axis vector × its α × its strength is added to the hidden state at the middle layer
    while the reply is generated.
 4. **Compare:** the same question is also answered without steering, side by side.
@@ -84,7 +85,7 @@ python -m detector.build            # optional experimental mood probe (the defa
 
 python -m eval.steer                # the table above
 python -m eval.layers               # which layer steers best
-python -m eval.detector             # mood detector accuracy on 54 hand-written messages (6 per mood)
+python -m eval.detector             # mood detector accuracy: 54 hand-written single-mood messages, 12 mixed
 ```
 
 Another model: `MODEL_ID=... python -m vectors.build --regen`. The committed vectors only fit Qwen2.5-3B.
@@ -96,9 +97,9 @@ simple → Flesch reading ease · calm → exclamation marks · cautious → hed
 
 ## Knobs (`config.py`)
 
-- `MAPPING`: which axes each mood pushes, and with what sign.
+- `MAPPING`: which axes each mood moves, toward what target, how fast.
 - `STRENGTH`: how hard each axis pushes at α = ±1, as a fraction of a typical hidden state (tuned from the table).
-- `KEEP`, `HOLD`, `THRESHOLD`: steering memory.
+- `THRESHOLD`: the intensity a mood needs to count.
 - `MODEL_ID`, `DTYPE`, `SYSTEM_PROMPT`, `MAX_NEW_TOKENS`, `BATCH_SIZE`.
 
 ## Code

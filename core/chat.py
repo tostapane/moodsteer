@@ -14,7 +14,7 @@ from core.controller import update
 from core.model import get_model
 from detector.detect import detect
 
-SESSIONS = {}            # session_id → {"history": [...], "baseline_history": [...], "state": {axis: α}, "n": mood msgs}
+SESSIONS = {}            # session_id → {"history": [...], "baseline_history": [...], "state": {axis: α}}
 LOCK = threading.Lock()  # one turn at a time: steering is global state on the model
 
 
@@ -23,10 +23,10 @@ def chat(session_id: str, msg: str, steer: bool = True, compare: bool = False, o
     emit = on_event or (lambda e: None)
     with LOCK:
         t = time.time()
-        s = SESSIONS.setdefault(session_id, {"history": [], "baseline_history": [], "state": {}, "n": 0})
+        s = SESSIONS.setdefault(session_id, {"history": [], "baseline_history": [], "state": {}})
         emit({"type": "stage", "stage": "detect"})
         scores = detect(msg, s["history"])
-        s["state"], s["n"] = update(s["state"], scores, s["n"])  # memory is kept even with steer off
+        s["state"] = update(s["state"], scores)  # memory is kept even with steer off
         alphas = dict(s["state"]) if steer else {}
         emit({"type": "detected", "scores": scores, "alphas": alphas, "seconds": time.time() - t})
         out = {"reply": reply(s["history"], msg, alphas, "steered", emit),

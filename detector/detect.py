@@ -1,7 +1,7 @@
 """Mood detection: message → mood scores 0..1.
 probe = project the model's activations, averaged over the whole user message, onto mood directions
         (built by detector/build.py). No generation, ~one forward pass.
-llm   = the model reads the conversation and names ONE dominant mood + intensity 0-10, as JSON.
+llm   = the model reads the conversation and lists the moods present, each with intensity 0-10, as JSON.
 config.DETECTOR picks where to start (probe → llm). If nothing can answer: neutral, i.e. no steering."""
 import json
 import re
@@ -50,12 +50,13 @@ def detect_probe(msg: str, history: list) -> dict[str, float] | None:
 # ---- llm ---------------------------------------------------------------------------------------
 
 PROMPT = ("You read a conversation between a user and an assistant and judge the mood of the user's LAST message.\n"
-          "Pick the ONE dominant mood, or neutral if no mood is clearly present. Most messages are neutral.\n"
+          "List only the moods clearly present, at most 3. Most messages are neutral: no mood at all.\n"
           "A plain request or instruction (like 'be concise') is neutral unless its tone shows a mood.\n"
           "Moods:\n"
           + "".join(f"- {m}: {d}\n" for m, d in MOOD_DESC.items())
           + "Intensity from 0 to 10: 0 = not present, 3 = mild, 6 = clear, 10 = extreme.\n"
-          'Reply with JSON only, no other text, for example: {"mood": "frustrated", "intensity": 4}')
+          'Reply with JSON only, no other text, mood → intensity.\n'
+          'One mood: {"frustrated": 4}. Two moods: {"rushed": 8, "confused": 5}. Neutral: {}')
 
 
 def detect_llm(msg: str, history: list) -> dict[str, float] | None:
@@ -66,16 +67,16 @@ def detect_llm(msg: str, history: list) -> dict[str, float] | None:
     model = get_model()
     model.set_alphas({})  # classify with the unsteered model
     reply = model.generate([{"role": "system", "content": PROMPT}, {"role": "user", "content": convo}],
-                           max_new_tokens=30)
+                           max_new_tokens=40)
+    scores = {m: 0.0 for m in MOOD_DESC}
     try:
         raw = json.loads(re.search(r"\{.*\}", reply, re.S).group())
-        mood = str(raw.get("mood", "neutral")).strip().lower()
-        level = min(10.0, max(0.0, float(raw.get("intensity", 0)))) / 10
+        for mood, level in raw.items():
+            mood = str(mood).strip().lower()
+            if mood in scores:  # anything unknown is ignored
+                scores[mood] = min(10.0, max(0.0, float(level))) / 10
     except (AttributeError, ValueError, TypeError):
         return None
-    scores = {m: 0.0 for m in MOOD_DESC}
-    if mood in scores:  # "neutral" or anything unknown → all zero
-        scores[mood] = level
     return with_neutral(scores)
 
 

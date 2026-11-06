@@ -141,11 +141,10 @@ class Turn:
 
     def mood_table(self, scores, alphas):
         rows = [c("dim", "\n  mood        this message")]
-        top = max((m for m in scores if m != "neutral"), key=scores.get, default=None)
         for m in config.MOODS:
             v = scores.get(m, 0.0)
             line = f"  {m:<11} {meter(v)} {v:.2f}"
-            if m == top and v >= config.THRESHOLD:
+            if v >= config.THRESHOLD:
                 line = c("yellow", line)
             elif v < 0.05:
                 line = c("dim", line)
