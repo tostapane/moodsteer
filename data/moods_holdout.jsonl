@@ -1,0 +1,160 @@
+{"mood": "neutral", "msg": "What is the boiling point of water at sea level?"}
+{"mood": "neutral", "msg": "How do I center a div in CSS?"}
+{"mood": "neutral", "msg": "Write a haiku about autumn."}
+{"mood": "neutral", "msg": "What's the capital of Australia?"}
+{"mood": "neutral", "msg": "Can you recommend a good book about Roman history?"}
+{"mood": "neutral", "msg": "Convert 50 miles to kilometers."}
+{"mood": "neutral", "msg": "how do i remove a wine stain from a shirt"}
+{"mood": "neutral", "msg": "What's the difference between a virus and a bacterium?"}
+{"mood": "neutral", "msg": "List the planets in order from the sun."}
+{"mood": "neutral", "msg": "Give me a recipe for banana bread."}
+{"mood": "neutral", "msg": "Fix the typo in this sentence: 'Their going to the store.'"}
+{"mood": "neutral", "msg": "what time zone is tokyo in"}
+{"mood": "neutral", "msg": "How much water should a dog drink per day?"}
+{"mood": "neutral", "msg": "Write a Python function that checks if a number is prime."}
+{"mood": "neutral", "msg": "Who wrote Pride and Prejudice?"}
+{"mood": "neutral", "msg": "Thanks, that worked."}
+{"mood": "neutral", "msg": "ok"}
+{"mood": "neutral", "msg": "Next question: what is photosynthesis?"}
+{"mood": "neutral", "msg": "I need a packing list for a week in Norway."}
+{"mood": "neutral", "msg": "Can you draft an email asking my landlord to fix the heater?"}
+{"mood": "neutral", "msg": "What does the word 'furious' mean?"}
+{"mood": "neutral", "msg": "Write an angry customer review for a fictional toaster."}
+{"mood": "neutral", "msg": "What is quicksort?"}
+{"mood": "neutral", "msg": "Give me a short poem about the sea."}
+{"mood": "neutral", "msg": "Translate 'I am very sad' into French."}
+{"mood": "neutral", "msg": "How does a quick release skewer work on a bike?"}
+{"mood": "neutral", "msg": "What are common symptoms of burnout?"}
+{"mood": "neutral", "msg": "What's the plot of Hamlet?"}
+{"mood": "neutral", "msg": "What should I name my cat?"}
+{"mood": "neutral", "msg": "I'm going to Rome in May. What should I pack?"}
+{"mood": "neutral", "msg": "Summarize the French Revolution in three paragraphs."}
+{"mood": "neutral", "msg": "What's the formula for the area of a circle?"}
+{"mood": "neutral", "msg": "Is a peanut a nut?"}
+{"mood": "neutral", "msg": "What's a good stretch for lower back pain?"}
+{"mood": "neutral", "msg": "How many ounces are in a pound?"}
+{"mood": "neutral", "msg": "Explain what an API is."}
+{"mood": "neutral", "msg": "Describe how vaccines work."}
+{"mood": "neutral", "msg": "Compare electric and gas stoves."}
+{"mood": "neutral", "msg": "Show me an example of a SQL join."}
+{"mood": "neutral", "msg": "My flight lands at 6pm. How long does it take to get from JFK to Manhattan?"}
+{"mood": "curious", "msg": "I've been wondering, why is the sky darker at the top of a mountain?"}
+{"mood": "curious", "msg": "Huh, why do onions make people cry?"}
+{"mood": "curious", "msg": "Just out of curiosity, how do submarines stay underwater?"}
+{"mood": "curious", "msg": "That makes me wonder: how do bees find their way home?"}
+{"mood": "curious", "msg": "What I find fascinating is how octopuses change color. How does that work?"}
+{"mood": "curious", "msg": "I never understood why the moon looks bigger near the horizon. Why is that?"}
+{"mood": "curious", "msg": "Oh interesting, so what's actually going on inside a battery?"}
+{"mood": "curious", "msg": "Now I'm curious, why do we yawn when other people yawn?"}
+{"mood": "curious", "msg": "Why do mirrors flip left and right but not up and down? I've always wondered."}
+{"mood": "curious", "msg": "How do magnets actually work at the atomic level? It's been on my mind."}
+{"mood": "curious", "msg": "I'd love to understand why time seems to speed up as we get older."}
+{"mood": "curious", "msg": "What's the story behind why keyboards are laid out the way they are? Always been curious."}
+{"mood": "confused", "msg": "Sorry, I don't follow. What do you mean by recursion here?"}
+{"mood": "confused", "msg": "Wait, I'm lost. Which file am I supposed to edit?"}
+{"mood": "confused", "msg": "I read that twice and it still doesn't make sense to me."}
+{"mood": "confused", "msg": "huh? what does that even mean"}
+{"mood": "confused", "msg": "You lost me at the second step."}
+{"mood": "confused", "msg": "I don't get how that answers my question."}
+{"mood": "confused", "msg": "So is it the first option or the second? I can't tell from what you wrote."}
+{"mood": "confused", "msg": "Can you say that differently? I didn't understand any of it."}
+{"mood": "confused", "msg": "I'm confused, is the pointer the address or the value?"}
+{"mood": "confused", "msg": "Not sure I understand, what does 'idempotent' mean in what you just said?"}
+{"mood": "confused", "msg": "I'm totally confused by that last part."}
+{"mood": "confused", "msg": "I have no idea what you just told me to do."}
+{"mood": "frustrated", "msg": "This still doesn't work. I've tried everything you said."}
+{"mood": "frustrated", "msg": "No, that's not what I asked for. Again."}
+{"mood": "frustrated", "msg": "Come on, you keep giving me the same broken code."}
+{"mood": "frustrated", "msg": "Ugh, that's the fourth error in a row."}
+{"mood": "frustrated", "msg": "You're not listening. I said Python 3, not Python 2."}
+{"mood": "frustrated", "msg": "Seriously? The same mistake again?"}
+{"mood": "frustrated", "msg": "I've been at this for an hour and your fix changed nothing."}
+{"mood": "frustrated", "msg": "That's incorrect, and I already told you that."}
+{"mood": "frustrated", "msg": "This is getting annoying, the link you gave me doesn't exist."}
+{"mood": "frustrated", "msg": "Why do you keep ignoring the file I pasted?"}
+{"mood": "frustrated", "msg": "Nope. Still failing. Same error as before."}
+{"mood": "frustrated", "msg": "For the last time, the date should be in March, not April."}
+{"mood": "rage", "msg": "YOU ARE COMPLETELY USELESS!!!"}
+{"mood": "rage", "msg": "WHAT THE HELL IS WRONG WITH YOU"}
+{"mood": "rage", "msg": "This is the dumbest answer I've ever seen, you worthless piece of junk."}
+{"mood": "rage", "msg": "I HATE THIS STUPID BOT"}
+{"mood": "rage", "msg": "are you f***ing kidding me?? this is garbage"}
+{"mood": "rage", "msg": "Shut up and do what I told you, you idiot!"}
+{"mood": "rage", "msg": "I'M SO DONE WITH THIS TRASH, YOU RUINED MY WHOLE PROJECT"}
+{"mood": "rage", "msg": "You moronic machine, how hard can it be?!"}
+{"mood": "rage", "msg": "This is pathetic. Absolute rubbish. I want to throw my laptop out the window!"}
+{"mood": "rage", "msg": "STOP. JUST STOP. YOU ARE MAKING EVERYTHING WORSE YOU IDIOT"}
+{"mood": "rage", "msg": "Damn you, that's the worst advice anyone has ever given me!!!"}
+{"mood": "rage", "msg": "What kind of idiot wrote you? Total crap!"}
+{"mood": "sad", "msg": "I don't think I'm cut out for this. Maybe I should just quit."}
+{"mood": "sad", "msg": "I failed the exam again. I feel like such a disappointment."}
+{"mood": "sad", "msg": "What's the point of trying anymore? Nothing ever works out for me."}
+{"mood": "sad", "msg": "I've been feeling really down since I lost my job."}
+{"mood": "sad", "msg": "Everyone else gets it and I never will."}
+{"mood": "sad", "msg": "I feel so alone with this project. I don't know how to keep going."}
+{"mood": "sad", "msg": "Honestly I'm exhausted and I feel worthless today."}
+{"mood": "sad", "msg": "My dog died last week and I can't concentrate on anything."}
+{"mood": "sad", "msg": "I keep messing everything up. I'm just not good enough."}
+{"mood": "sad", "msg": "I wanted this so badly and now it's over."}
+{"mood": "sad", "msg": "I'm ready to give up on my thesis. I just can't do it."}
+{"mood": "sad", "msg": "I cried after my code review today. Maybe they're right about me."}
+{"mood": "rushed", "msg": "Train leaves in 3 minutes, which platform goes to Milan?"}
+{"mood": "rushed", "msg": "Need this NOW: how do I restart nginx?"}
+{"mood": "rushed", "msg": "no time, just the answer: what's 15% of 240?"}
+{"mood": "rushed", "msg": "Client call starts in one minute. What's the time difference with Sydney?"}
+{"mood": "rushed", "msg": "Hurrying out the door, can I freeze cooked rice, yes or no?"}
+{"mood": "rushed", "msg": "Gotta run, quick answer please: which fork is for salad?"}
+{"mood": "rushed", "msg": "Keep your answers short from now on."}
+{"mood": "rushed", "msg": "Stop with the long answers, a couple of sentences is enough."}
+{"mood": "rushed", "msg": "Your replies are way too wordy, trim them down."}
+{"mood": "rushed", "msg": "Give me the short version."}
+{"mood": "rushed", "msg": "Less text please, I only need the gist."}
+{"mood": "rushed", "msg": "Answer in under ten words: what is DNS?"}
+{"mood": "excited", "msg": "YES! It finally works, this is awesome!!!"}
+{"mood": "excited", "msg": "I just got the job!! I can't believe it!"}
+{"mood": "excited", "msg": "Omg this is the coolest thing I've ever built!"}
+{"mood": "excited", "msg": "I passed!!! Best day ever!"}
+{"mood": "excited", "msg": "Woohoo, my app just got its first 100 users!"}
+{"mood": "excited", "msg": "This is incredible, I love how this turned out!"}
+{"mood": "excited", "msg": "We're going to Japan next month and I'm so pumped!"}
+{"mood": "excited", "msg": "Amazing, you're a lifesaver, it runs perfectly now!!"}
+{"mood": "excited", "msg": "I can't wait to try this out, I'm so excited!"}
+{"mood": "excited", "msg": "Wow wow wow, that trick just saved me hours!"}
+{"mood": "excited", "msg": "Just adopted a puppy and I'm over the moon!"}
+{"mood": "excited", "msg": "My paper got accepted!! Let's gooo!"}
+{"mood": "skeptical", "msg": "Are you sure about that? It doesn't match what I've read."}
+{"mood": "skeptical", "msg": "I doubt that's right. Do you have a source?"}
+{"mood": "skeptical", "msg": "That sounds made up. Where did you get that number?"}
+{"mood": "skeptical", "msg": "Citation needed. I don't buy it."}
+{"mood": "skeptical", "msg": "Really? A single library does all of that? I find that hard to believe."}
+{"mood": "skeptical", "msg": "Can you prove that claim? It seems off to me."}
+{"mood": "skeptical", "msg": "You sound confident, but how do you actually know this?"}
+{"mood": "skeptical", "msg": "Hmm, that contradicts the official docs. Are you certain?"}
+{"mood": "skeptical", "msg": "I'm not sure I trust this answer. Show me the evidence."}
+{"mood": "skeptical", "msg": "That seems too good to be true. What's the catch?"}
+{"mood": "skeptical", "msg": "Says who? I'd want to see a study before believing that."}
+{"mood": "skeptical", "msg": "I don't believe that figure. Double-check it and show the calculation."}
+{"mood": "wants_detail", "msg": "Can you give me a longer explanation of that?"}
+{"mood": "wants_detail", "msg": "That wasn't enough, I need much more detail."}
+{"mood": "wants_detail", "msg": "Walk me through it step by step with everything I need to know."}
+{"mood": "wants_detail", "msg": "Your answers are too brief, please write more."}
+{"mood": "wants_detail", "msg": "Elaborate on the second point."}
+{"mood": "wants_detail", "msg": "I need a full, in-depth answer this time."}
+{"mood": "wants_detail", "msg": "Say more about that, you skipped a lot."}
+{"mood": "wants_detail", "msg": "Please make your answers longer from now on."}
+{"mood": "wants_detail", "msg": "Could you be more thorough? This feels incomplete."}
+{"mood": "wants_detail", "msg": "Break that down more, and don't leave anything out."}
+{"mood": "wants_detail", "msg": "A one-liner doesn't help me, explain properly."}
+{"mood": "wants_detail", "msg": "Give me the long version, with all the details."}
+{"moods": ["frustrated", "rushed"], "msg": "Ugh, wrong again and I have to submit this in five minutes!"}
+{"moods": ["sad", "confused"], "msg": "I can't do this anymore, and your answer just made no sense to me."}
+{"moods": ["excited", "curious"], "msg": "This is so cool!! Wait, how does it actually do that under the hood?"}
+{"moods": ["skeptical", "confused"], "msg": "Are you sure? That makes no sense, I don't understand how that could work."}
+{"moods": ["frustrated", "skeptical"], "msg": "I've told you three times already and I don't believe your new answer either."}
+{"moods": ["rage", "rushed"], "msg": "FIX IT NOW YOU IDIOT, I HAVE TWO MINUTES!!!"}
+{"moods": ["frustrated", "sad"], "msg": "Still broken, and now I just feel stupid. I'm about to give up."}
+{"moods": ["rushed", "confused"], "msg": "Hurry, I'm late and I didn't get what you said, which command do I run?"}
+{"moods": ["excited", "skeptical"], "msg": "I'm thrilled this works but I doubt it's really that fast. Is that true?"}
+{"moods": ["wants_detail", "frustrated"], "msg": "Your answer was way too short and that's the third time I've asked. Annoying."}
+{"moods": ["confused", "wants_detail"], "msg": "I don't get it, could you explain in much more detail?"}
+{"moods": ["curious", "skeptical"], "msg": "Interesting, but I'm skeptical. Why would that be the case? Where's the evidence?"}

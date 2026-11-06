@@ -18,7 +18,7 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))  # rows generated at once: bound
 #   "probe" = experimental activation reader (needs detector/build.py), falls back to "llm".
 DETECTOR = os.getenv("DETECTOR", "llm")
 MOODS = ["neutral", "curious", "confused", "frustrated", "rage", "sad", "rushed", "excited", "skeptical",
-         "wants_detail"]
+         "wants_detail", "wants_prose"]
 
 # steering memory, per axis (core/controller.py)
 #   a mood with intensity ≥ THRESHOLD moves only the axes it lists: state += intensity × speed × (target − state)
@@ -39,6 +39,7 @@ MAPPING = {
     "excited":    {"calm": (-0.5, 0.8)},
     "skeptical":  {"cautious": (1.0, 0.8)},
     "wants_detail": {"concise": (0.0, 1.0), "direct": (0.0, 1.0)},
+    "wants_prose":  {"structured": (-1.0, 1.0)},  # keyword rule only (detector/detect.py), the model isn't asked
 }
 
 # the other pole of each axis, for display

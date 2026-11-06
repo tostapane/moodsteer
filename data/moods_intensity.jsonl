@@ -1,0 +1,18 @@
+{"mood": "curious", "mild": "Hm, I guess I wonder why cats purr.", "strong": "I'm absolutely fascinated, I just have to know why cats purr!"}
+{"mood": "curious", "mild": "Kind of wondering how tides work.", "strong": "I can't stop thinking about tides, how on earth do they work?!"}
+{"mood": "confused", "mild": "I'm a little unsure what you meant there.", "strong": "I'm completely lost, none of what you said makes any sense to me."}
+{"mood": "confused", "mild": "Not quite following that last bit.", "strong": "I have absolutely no idea what any of this means, I'm totally confused."}
+{"mood": "frustrated", "mild": "Hmm, that didn't quite work.", "strong": "This is the tenth time it has failed and I am really fed up with this."}
+{"mood": "frustrated", "mild": "That's slightly off from what I asked.", "strong": "That is nowhere near what I asked, and I keep having to repeat myself. So annoying."}
+{"mood": "rage", "mild": "That was a pretty stupid answer.", "strong": "THAT IS THE MOST IDIOTIC GARBAGE I HAVE EVER READ, YOU USELESS MACHINE!!!"}
+{"mood": "rage", "mild": "You're being an idiot right now.", "strong": "YOU WORTHLESS IDIOT, I SWEAR I'M GOING TO SMASH THIS THING!!!"}
+{"mood": "sad", "mild": "I'm feeling a bit down about this.", "strong": "I feel completely hopeless. I'm worthless and I can't see any way forward."}
+{"mood": "sad", "mild": "Today's been a little discouraging.", "strong": "Everything is falling apart and I just want to give up on all of it."}
+{"mood": "rushed", "mild": "I'm a bit short on time, how do I boil rice?", "strong": "NO TIME AT ALL, I need this in ten seconds, how do I boil rice?!"}
+{"mood": "rushed", "mild": "Maybe a slightly shorter answer next time.", "strong": "Way too long! As few words as humanly possible from now on, right now!"}
+{"mood": "excited", "mild": "Nice, that's pretty good.", "strong": "THIS IS THE BEST THING EVER!!! I'M SO INCREDIBLY HAPPY!!!"}
+{"mood": "excited", "mild": "Cool, I'm kind of looking forward to this.", "strong": "I am beyond thrilled, I literally can't stop jumping around!!!"}
+{"mood": "skeptical", "mild": "I'm not totally sure that's right.", "strong": "I don't believe a single word of that, prove it or I'm calling it nonsense."}
+{"mood": "skeptical", "mild": "That seems a little off, maybe?", "strong": "That is clearly made up, and I won't accept it without hard evidence."}
+{"mood": "wants_detail", "mild": "Maybe add a little more to that.", "strong": "That is far too thin, I need every single detail, explained at great length."}
+{"mood": "wants_detail", "mild": "Could use slightly more explanation.", "strong": "Please give me the longest, most exhaustive explanation you possibly can."}

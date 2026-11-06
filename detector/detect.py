@@ -95,21 +95,30 @@ def detect_llm(msg: str) -> dict[str, float] | None:
 
 DETECTORS = {"probe": detect_probe, "llm": detect_llm}
 
-# explicit requests for longer or shorter answers: a keyword match, more reliable here than a 3B model
+# explicit requests about the answer's length or shape: a keyword match, more reliable here than a 3B model
 ASKS_DETAIL = re.compile(r"more (detail|depth|clear|example)|lots? of detail|in detail|detailed|clearer|explain more"
                          r"|something more|tell me more|too (short|brief)|so rushed|expand on|go deeper"
                          r"|(not|n'?t|less)( be)?( so)? (brief|concise|short)", re.I)
 ASKS_SHORT = re.compile(r"\b(brief|briefly|concise|concisely|shorter|summary|tl;?dr)\b|too long|wall of text"
                         r"|keep it short|in (one|a) (sentence|line)|one[- ]line|few words|key points|cut it down", re.I)
 
+ASKS_PROSE = re.compile(r"\b(no|without|avoid|stop using)( any)? (bullets?( points?)?|numbered lists?|lists\b)"
+                        r"|n'?t (use|want|give me)( any)? (bullets?( points?)?|numbered lists?|lists\b)"
+                        r"|in prose|(one|single) paragraph", re.I)
+
 
 def with_request(msg: str, scores: dict | None) -> dict | None:
     """An explicit request always counts at full intensity, whatever the detector said."""
-    mood = "wants_detail" if ASKS_DETAIL.search(msg) else "rushed" if ASKS_SHORT.search(msg) else None
-    if mood is None:
+    asked = {}
+    if ASKS_DETAIL.search(msg):
+        asked = {"rushed": 0.0, "wants_detail": 1.0}
+    elif ASKS_SHORT.search(msg):
+        asked = {"rushed": 1.0, "wants_detail": 0.0}
+    if ASKS_PROSE.search(msg):
+        asked["wants_prose"] = 1.0
+    if not asked:
         return scores
-    scores = {**(scores or {m: 0.0 for m in MOOD_DESC}), "rushed": 0.0, "wants_detail": 0.0, mood: 1.0}
-    return with_neutral(scores)
+    return with_neutral({**(scores or {m: 0.0 for m in MOOD_DESC}), **asked})
 
 
 def detect(msg: str) -> dict[str, float]:

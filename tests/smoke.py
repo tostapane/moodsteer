@@ -102,6 +102,11 @@ for msg, mood in (("be very very concise", "rushed"), ("please dont procude wall
                   ("dont be so brief", "wants_detail"), ("please be more clear", "wants_detail")):
     assert with_request(msg, None)[mood] == 1.0, msg
 assert with_request("what is rain?", None) is None
+for msg in ("no bullet points please", "dont use bullets", "answer without lists", "explain it in prose"):
+    assert with_request(msg, None)["wants_prose"] == 1.0, msg
+r = chat("smoke-l", "no bullet points, and keep it short")  # both requests count
+assert r["alphas"]["structured"] == -1.0 and r["alphas"]["concise"] == 1.0, r
+assert with_request("what is a list comprehension? no list comprehension please", None) is None
 
 # stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
 JsonModel.answer = '{}'
