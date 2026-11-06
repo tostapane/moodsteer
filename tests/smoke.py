@@ -10,7 +10,8 @@ import config  # noqa: E402
 config.TRACE_FILE = "runs/smoke.jsonl"
 
 import core.model  # noqa: E402
-from core.chat import chat  # noqa: E402
+from core.chat import SESSIONS, chat  # noqa: E402
+from core.controller import capped, push  # noqa: E402
 from detector.detect import PROMPT, detect  # noqa: E402
 
 # fake model doesn't answer JSON → detector can't answer → neutral, no steering
@@ -21,10 +22,11 @@ assert r["scores"]["neutral"] == 1.0 and r["alphas"] == {}, r
 class JsonModel(core.model.FakeModel):
     """Answers the mood prompt with JSON, everything else like the fake model."""
     answer = None
+    seen = None
 
     def generate(self, messages, max_new_tokens=None, on_token=None):
         if messages[0]["content"] == PROMPT:
-            last = messages[-1]["content"].split("USER (last message):")[-1]
+            last = JsonModel.seen = messages[-1]["content"]
             return self.answer or ('{"rage": 10}' if "WTF" in last else '{"frustrated": 9}' if "wrong" in last else '{}')
         return super().generate(messages, max_new_tokens, on_token)
 
@@ -45,11 +47,12 @@ assert abs(r["alphas"]["concise"] - (0.396 + 0.72 * (0.55 - 0.396))) < 1e-9, r
 r = chat("smoke-c", "WTF THIS IS USELESS")
 assert abs(r["alphas"]["calm"] - 1.0) < 1e-9, r
 
-r = chat("smoke-d", "WTF", steer=False)
-assert r["alphas"] == {}, r
+r = chat("smoke-d", "WTF", steered=False, baseline=True)  # steered off: no detection, no steered reply, memory untouched
+assert "reply" not in r and r["scores"] == {} and r["alphas"] == {} and "steering: none" in r["baseline"], r
+assert JsonModel.seen == "WTF THIS IS USELESS", JsonModel.seen  # the detector wasn't called, and it only sees the message
 
 events = []
-r = chat("smoke-e", "WTF!!!", compare=True, on_event=events.append)
+r = chat("smoke-e", "WTF!!!", baseline=True, on_event=events.append)
 kinds = [e["type"] for e in events]
 assert "baseline" in r and kinds.count("detected") == 1, kinds  # one detection for both replies
 assert any(e["type"] == "token" and e["stream"] == "baseline" for e in events), events
@@ -61,12 +64,17 @@ assert r["alphas"]["calm"] < 0, r
 
 JsonModel.answer = '{"rushed": 10}'  # very rushed jumps to the target
 r = chat("smoke-g", "quick")
-assert r["alphas"]["concise"] == 1.0, r
+assert r["alphas"]["concise"] == 1.0 and "concise=0.75" in r["reply"], r  # memory 1.0, capped for the reply
+assert abs(push(capped(r["alphas"])) - config.MAX_PUSH) < 1e-9 and capped({"concise": 0.5}) == {"concise": 0.5}
 JsonModel.answer = '{}'  # neutral changes nothing
 assert chat("smoke-g", "and then?")["alphas"]["concise"] == 1.0
 JsonModel.answer = '{"curious": 6}'  # curious eases concise a little, and adds its own axis
 r = chat("smoke-g", "why?")
 assert abs(r["alphas"]["concise"] - 0.85) < 1e-9 and abs(r["alphas"]["cautious"] - 0.15) < 1e-9, r
+
+JsonModel.answer = '{"wants_detail": 10}'  # asking for detail switches concise and direct off, keeps the rest
+r = chat("smoke-g", "tell me more")
+assert "concise" not in r["alphas"] and "direct" not in r["alphas"] and "cautious" in r["alphas"], r
 
 JsonModel.answer = '{"rushed": 8, "frustrated": 6}'  # both count, the stronger applies last
 r = chat("smoke-h", "still broken, hurry")
@@ -74,12 +82,19 @@ assert r["scores"]["rushed"] == 0.8 and r["scores"]["frustrated"] == 0.6, r
 assert abs(r["alphas"]["concise"] - 0.8528) < 1e-9 and abs(r["alphas"]["accountable"] - 0.288) < 1e-9, r
 
 JsonModel.answer = 'Sure! {"sad": "x"}'  # not a number → detector gives up → neutral
-assert detect("I give up", [])["neutral"] == 1.0
+assert detect("I give up")["neutral"] == 1.0
 JsonModel.answer = '{"confused": 30}'  # clamped to 10
-s = detect("I don't get it", [])
+s = detect("I don't get it")
 assert s["confused"] == 1.0 and s["neutral"] == 0.0 and s["sad"] == 0.0, s
 JsonModel.answer = '{"bored": 8}'  # unknown mood → neutral
-assert detect("meh", [])["neutral"] == 1.0
+assert detect("meh")["neutral"] == 1.0
+
+# stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
+JsonModel.answer = '{}'
+r = chat("smoke-i", "hello", baseline=True, on_event=lambda e: e["type"] == "token" and core.model.STOP.set())
+assert "baseline" not in r and "you said" not in r["reply"], r
+assert SESSIONS["smoke-i"]["history"][-1]["content"] == r["reply"] and SESSIONS["smoke-i"]["baseline_history"] == []
+assert "you said" in chat("smoke-i", "again")["reply"]
 
 # CLI word wrap: no line longer than the width, words kept intact
 import cli  # noqa: E402

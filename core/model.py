@@ -2,11 +2,14 @@
 Vector file (artifacts/vectors/<axis>.pt): {"vec": Tensor[d_model], "layer": int}. Strength: config.STRENGTH."""
 import os
 import random
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
 import config
+
+STOP = threading.Event()  # set it to end the generation in progress
 
 
 class FakeModel:
@@ -23,10 +26,16 @@ class FakeModel:
         alphas = self.alphas if alphas is None else alphas
         tag = ", ".join(f"{k}={v:.2f}" for k, v in alphas.items()) or "none"
         reply = f"[fake | steering: {tag}] you said: {messages[-1]['content']}"
-        for word in reply.split(" ") if on_token else []:
+        if not on_token:
+            return reply
+        words = []
+        for word in reply.split(" "):
+            if STOP.is_set():
+                break
             time.sleep(0.02)
             on_token(word + " ")
-        return reply
+            words.append(word)
+        return " ".join(words)
 
     def generate_batch(self, convos, max_new_tokens=None):
         rows = self.alphas if isinstance(self.alphas, list) else [self.alphas] * len(convos)
@@ -51,7 +60,7 @@ class Model:
     def __init__(self):
         quiet()
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
 
         self.torch = torch
         self.tok = AutoTokenizer.from_pretrained(config.MODEL_ID)
@@ -65,6 +74,12 @@ class Model:
         self.steer = {}  # layer index → Tensor[rows, d_model] added to that layer's output, one row per batch row
         for i, layer in enumerate(self.layers):
             layer.register_forward_hook(self._hook(i))
+
+        class Stop(StoppingCriteria):
+            def __call__(self, input_ids, scores, **kwargs):
+                return torch.full((input_ids.shape[0],), STOP.is_set(), dtype=torch.bool, device=input_ids.device)
+
+        self.stopping = StoppingCriteriaList([Stop()])
 
     def _hook(self, i):
         def hook(module, inp, out):
@@ -107,15 +122,13 @@ class Model:
         """on_token(text) is called with each new piece of text as it is generated."""
         if on_token is None:
             return self.generate_batch([messages], max_new_tokens)[0]
-        from threading import Thread
-
         from transformers import TextIteratorStreamer
 
         enc = self.tok(self.chat_text(messages), return_tensors="pt", add_special_tokens=False).to(self.model.device)
         streamer = TextIteratorStreamer(self.tok, skip_prompt=True, skip_special_tokens=True)
-        thread = Thread(target=self.model.generate, kwargs=dict(
+        thread = threading.Thread(target=self.model.generate, kwargs=dict(
             **enc, streamer=streamer, max_new_tokens=max_new_tokens or config.MAX_NEW_TOKENS,
-            do_sample=False, pad_token_id=self.tok.pad_token_id))
+            do_sample=False, pad_token_id=self.tok.pad_token_id, stopping_criteria=self.stopping))
         thread.start()
         reply = ""
         for text in streamer:
@@ -138,7 +151,8 @@ class Model:
                        add_special_tokens=False).to(self.model.device)
         with self.torch.no_grad():
             out = self.model.generate(**enc, max_new_tokens=max_new_tokens or config.MAX_NEW_TOKENS,
-                                      do_sample=False, pad_token_id=self.tok.pad_token_id)
+                                      do_sample=False, pad_token_id=self.tok.pad_token_id,
+                                      stopping_criteria=self.stopping)
         return [self.tok.decode(o[enc.input_ids.shape[1]:], skip_special_tokens=True).strip() for o in out]
 
     def acts(self, texts, layer=None, starts=None):

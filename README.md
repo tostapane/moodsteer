@@ -12,14 +12,14 @@ The steering vectors for Qwen2.5-3B are in the repo, so there's nothing to build
 git clone https://github.com/tostapane/moodsteer && cd moodsteer
 pip install -r requirements.txt     # torch, transformers, accelerate, gradio
 python app.py --share               # web demo: public link printed in the output
-python cli.py                       # or the terminal chat. /compare /steer /reset /quit
+python cli.py                       # or the terminal chat. /steer /compare /reset /quit, Ctrl+C stops the reply
 FAKE=1 python cli.py                # no GPU: canned replies, shows the mood → steering pipeline
 ```
 
 From a notebook: `import app; app.demo.launch(share=True)`.
 
-The demo shows, for each message, the mood it detected, the steering state per axis, and the steered reply next to
-the same model's reply without steering.
+The demo shows the steering state per axis, the moods it detected in the latest message, and the steered reply next to
+the same model's reply without steering. Either reply can be turned off to save time, and Stop ends a reply early.
 
 ## Results (Qwen2.5-3B, `python -m eval.steer`)
 
@@ -57,13 +57,13 @@ Every reply behind these numbers is saved to `runs/` when you run the scripts.
 ## How it works
 
 Every turn:
-1. **Detect:** the model reads the conversation and lists the user's moods, each with an intensity
+1. **Detect:** the model reads the latest message and lists the user's moods, each with an intensity
    (frustrated 6/10 and rushed 8/10, …).
 2. **Remember:** a mood moves only the axes it lists, toward a target at its own speed:
    `state += intensity × speed × (target − state)`. Very rushed jumps straight to short answers, curious eases them
    a little, and a neutral message changes nothing.
 3. **Steer:** each axis vector × its α × its strength is added to the hidden state at the middle layer
-   while the reply is generated.
+   while the reply is generated. If the axes add up to more than `MAX_PUSH`, they shrink together for that reply.
 4. **Compare:** the same question is also answered without steering, side by side.
 
 The 8 steering axes (+ pole ↔ − pole): concise ↔ long · warm ↔ cold · calm ↔ enthusiastic ·
@@ -85,7 +85,7 @@ python -m detector.build            # optional experimental mood probe (the defa
 
 python -m eval.steer                # the table above
 python -m eval.layers               # which layer steers best
-python -m eval.detector             # mood detector accuracy: 54 hand-written single-mood messages, 12 mixed
+python -m eval.detector             # mood detector accuracy: 67 hand-written single-mood messages, 12 mixed
 ```
 
 Another model: `MODEL_ID=... python -m vectors.build --regen`. The committed vectors only fit Qwen2.5-3B.
@@ -100,6 +100,7 @@ simple → Flesch reading ease · calm → exclamation marks · cautious → hed
 - `MAPPING`: which axes each mood moves, toward what target, how fast.
 - `STRENGTH`: how hard each axis pushes at α = ±1, as a fraction of a typical hidden state (tuned from the table).
 - `THRESHOLD`: the intensity a mood needs to count.
+- `MAX_PUSH`: limit on the total push of one reply.
 - `MODEL_ID`, `DTYPE`, `SYSTEM_PROMPT`, `MAX_NEW_TOKENS`, `BATCH_SIZE`.
 
 ## Code

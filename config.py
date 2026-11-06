@@ -14,10 +14,11 @@ SYSTEM_PROMPT = "You are a helpful assistant."
 MAX_NEW_TOKENS = 400
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))  # rows generated at once: bounds memory on long lists
 
-# mood detection: the model reads the conversation and lists the moods present, each with intensity 0-10 (→ 0..1).
+# mood detection: the model reads the latest message and lists the moods present, each with intensity 0-10 (→ 0..1).
 #   "probe" = experimental activation reader (needs detector/build.py), falls back to "llm".
 DETECTOR = os.getenv("DETECTOR", "llm")
-MOODS = ["neutral", "curious", "confused", "frustrated", "rage", "sad", "rushed", "excited", "skeptical"]
+MOODS = ["neutral", "curious", "confused", "frustrated", "rage", "sad", "rushed", "excited", "skeptical",
+         "wants_detail"]
 
 # steering memory, per axis (core/controller.py)
 #   a mood with intensity ≥ THRESHOLD moves only the axes it lists: state += intensity × speed × (target − state)
@@ -37,7 +38,12 @@ MAPPING = {
     "rushed":     {"concise": (1.0, 1.0), "direct": (1.0, 1.0)},
     "excited":    {"calm": (-0.5, 0.8)},
     "skeptical":  {"cautious": (1.0, 0.8)},
+    "wants_detail": {"concise": (0.0, 1.0), "direct": (0.0, 1.0)},
 }
+
+# the other pole of each axis, for display
+POLES = {"concise": "long", "warm": "cold", "calm": "enthusiastic", "simple": "technical", "direct": "roundabout",
+         "cautious": "overconfident", "structured": "freeform", "accountable": "defensive"}
 
 # strength: how hard each axis pushes at α = ±1, as a fraction of a typical hidden state (0.1 = 10%).
 #   Vectors are rescaled when built, so the same number means the same push on every axis.
@@ -51,3 +57,7 @@ STRENGTH = {
     "concise": 0.6, "warm": 0.3, "calm": 0.6, "simple": 0.6,
     "direct": 0.3, "cautious": 0.4, "structured": 0.3, "accountable": 0.3,
 }
+
+# limit on the total push of one reply, same unit as STRENGTH: moods add up, and too much breaks the model.
+#   Above it, all axes shrink together for that reply. The steering memory itself isn't touched.
+MAX_PUSH = 0.5

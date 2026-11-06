@@ -3,7 +3,8 @@ Runs the whole pipeline in-process.
   python cli.py                          # Qwen2.5-3B on GPU (override with MODEL_ID / DTYPE env vars)
   MODEL_ID=... python cli.py             # another model: rebuild the vectors for it first (python -m vectors.build)
   FAKE=1 python cli.py                   # no GPU, canned replies
-Commands: /compare  toggle the unsteered reply · /steer  toggle steering · /reset  new conversation · /quit"""
+Commands: /steer  toggle the steered reply · /compare  toggle the baseline reply · /reset  new conversation · /quit
+Ctrl+C stops the reply in progress."""
 import itertools
 import re
 import shutil
@@ -14,7 +15,8 @@ import time
 
 import config
 from core.chat import chat, reset
-from core.model import get_model
+from core.controller import push
+from core.model import STOP, get_model
 
 TTY = sys.stdout.isatty()
 MAX_WIDTH = 100  # replies wrap at the terminal width, capped here so lines stay readable full screen
@@ -140,24 +142,28 @@ class Turn:
         return out
 
     def mood_table(self, scores, alphas):
-        rows = [c("dim", "\n  mood        this message")]
-        for m in config.MOODS:
-            v = scores.get(m, 0.0)
-            line = f"  {m:<11} {meter(v)} {v:.2f}"
-            if v >= config.THRESHOLD:
-                line = c("yellow", line)
-            elif v < 0.05:
-                line = c("dim", line)
-            rows.append(line)
         vectors = getattr(self.model, "vectors", None)
         if alphas:
             parts = []
             for b, a in sorted(alphas.items(), key=lambda kv: -abs(kv[1])):
                 missing = vectors is not None and b not in vectors
-                parts.append(f"{b} {a:+.2f}" + (c("red", " (no vector)") if missing else ""))
-            rows.append(c("cyan", "  steering state → ") + " · ".join(parts))
+                parts.append(f"{b if a >= 0 else config.POLES.get(b, b)} {abs(a):.2f}"
+                             + (c("red", " (no vector)") if missing else ""))
+            p = push(alphas)
+            parts.append(c("dim", f"total push {min(p, config.MAX_PUSH):.2f}"
+                                  + (f" (capped from {p:.2f})" if p > config.MAX_PUSH else "")))
+            rows = [c("cyan", "\n  steering state → ") + " · ".join(parts)]
         else:
-            rows.append(c("cyan", "  steering state → ") + c("dim", "none"))
+            rows = [c("cyan", "\n  steering state → ") + c("dim", "none")]
+        rows.append(c("dim", "\n  mood          this message only"))
+        for m in config.MOODS:
+            v = scores.get(m, 0.0)
+            line = f"  {m:<13} {meter(v)} {v:.2f}"
+            if v >= config.THRESHOLD:
+                line = c("yellow", line)
+            elif v < 0.05:
+                line = c("dim", line)
+            rows.append(line)
         return "\n".join(rows) + "\n"
 
 
@@ -167,7 +173,7 @@ def main():
     model = get_model()
     vectors = sorted(getattr(model, "vectors", {}) or [])
     screen.write(
-        c("bold", "moodsteer") + c("dim", " · /compare /steer /reset /quit") + "\n"
+        c("bold", "moodsteer") + c("dim", " · /steer /compare /reset /quit · Ctrl+C stops the reply") + "\n"
         + c("dim", f"model {'FAKE' if config.FAKE else config.MODEL_ID} · detector {config.DETECTOR} · "
                    f"vectors {', '.join(vectors) or 'none (run: python -m vectors.build)'}") + "\n")
     steer, compare, n, session = True, True, 0, f"cli-{int(time.time())}"
@@ -200,9 +206,20 @@ def main():
                 screen.write(c("dim", f"  {msg[1:]}: done") + "\n")
                 screen.bar(status=status())
                 continue
+            if not (steer or compare):
+                screen.write(c("dim", "  steered and baseline are both off: /steer or /compare turns one on") + "\n")
+                continue
             n += 1
             turn = Turn(screen, model, n)
-            chat(session, msg, steer=steer, compare=compare, on_event=turn)
+            worker = threading.Thread(target=chat, args=(session, msg), daemon=True,
+                                      kwargs=dict(steered=steer, baseline=compare, on_event=turn))
+            worker.start()
+            while worker.is_alive():
+                try:
+                    worker.join(0.1)
+                except KeyboardInterrupt:
+                    STOP.set()
+                    screen.write("\n" + c("dim", "  stopping") + "\n")
             screen.bar(busy=None, status=status(turn.times))
     except KeyboardInterrupt:
         pass

@@ -1,7 +1,9 @@
-"""One turn: detect the mood, update the steering memory, reply steered (and unsteered with compare=True), log.
+"""One turn: detect the mood, update the steering memory, reply steered and/or unsteered, log.
+Steered off: no detection, the memory stays as it is. Each reply has its own history, and a reply that's off misses
+that message. core.model.STOP ends the turn early: what was written so far stays in the history.
 on_event(dict) gets live progress (used by the CLI and the web demo):
   {"type": "stage", "stage": "detect" | "steered" | "baseline"}
-  {"type": "detected", "scores", "alphas", "seconds"}   alphas = the steering state applied this turn
+  {"type": "detected", "scores", "alphas", "seconds"}   alphas = the steering state after this message
   {"type": "token", "stream": "steered" | "baseline", "text"}
   {"type": "replied", "stream", "seconds", "words"}"""
 import json
@@ -10,30 +12,33 @@ import time
 from pathlib import Path
 
 import config
-from core.controller import update
-from core.model import get_model
+from core.controller import capped, update
+from core.model import STOP, get_model
 from detector.detect import detect
 
 SESSIONS = {}            # session_id → {"history": [...], "baseline_history": [...], "state": {axis: α}}
 LOCK = threading.Lock()  # one turn at a time: steering is global state on the model
 
 
-def chat(session_id: str, msg: str, steer: bool = True, compare: bool = False, on_event=None) -> dict:
-    """compare=True also generates the unsteered reply (own history), with a single mood detection."""
+def chat(session_id: str, msg: str, steered: bool = True, baseline: bool = False, on_event=None) -> dict:
     emit = on_event or (lambda e: None)
     with LOCK:
+        STOP.clear()
         t = time.time()
         s = SESSIONS.setdefault(session_id, {"history": [], "baseline_history": [], "state": {}})
-        emit({"type": "stage", "stage": "detect"})
-        scores = detect(msg, s["history"])
-        s["state"] = update(s["state"], scores)  # memory is kept even with steer off
-        alphas = dict(s["state"]) if steer else {}
-        emit({"type": "detected", "scores": scores, "alphas": alphas, "seconds": time.time() - t})
-        out = {"reply": reply(s["history"], msg, alphas, "steered", emit),
-               "scores": scores, "alphas": alphas}
-        if compare:
+        scores = {}
+        if steered:
+            emit({"type": "stage", "stage": "detect"})
+            scores = detect(msg)
+            s["state"] = update(s["state"], scores)
+            emit({"type": "detected", "scores": scores, "alphas": s["state"], "seconds": time.time() - t})
+        alphas = dict(s["state"])
+        out = {"scores": scores, "alphas": alphas}
+        if steered and not STOP.is_set():
+            out["reply"] = reply(s["history"], msg, alphas, "steered", emit)
+        if baseline and not STOP.is_set():
             out["baseline"] = reply(s["baseline_history"], msg, {}, "baseline", emit)
-        log({"session_id": session_id, "steer": steer, "msg": msg, "latency": time.time() - t, **out})
+        log({"session_id": session_id, "msg": msg, "latency": time.time() - t, **out})
         return out
 
 
@@ -41,7 +46,7 @@ def reply(history: list, msg: str, alphas: dict, stream: str, emit) -> str:
     emit({"type": "stage", "stage": stream})
     t = time.time()
     model = get_model()
-    model.set_alphas(alphas)
+    model.set_alphas(capped(alphas))
     messages = [{"role": "system", "content": config.SYSTEM_PROMPT}, *history, {"role": "user", "content": msg}]
     text = model.generate(messages, on_token=lambda chunk: emit({"type": "token", "stream": stream, "text": chunk}))
     history += [{"role": "user", "content": msg}, {"role": "assistant", "content": text}]

@@ -52,3 +52,16 @@
 {"mood": "skeptical", "msg": "Prove it. Show me where the docs say that function is thread-safe."}
 {"mood": "skeptical", "msg": "That number seems way too high. How did you calculate it?"}
 {"mood": "skeptical", "msg": "I'm not convinced. Last time you were confident and wrong."}
+{"mood": "neutral", "msg": "hi"}
+{"mood": "neutral", "msg": "explain me what a watermelon is"}
+{"mood": "neutral", "msg": "now explain what is palm oil"}
+{"mood": "neutral", "msg": "what about apricot?"}
+{"mood": "neutral", "msg": "how do i load a washing machine?"}
+{"mood": "neutral", "msg": "tell me how to do laundry"}
+{"mood": "rushed", "msg": "let's keep things concise from now on"}
+{"mood": "wants_detail", "msg": "you can tell something more"}
+{"mood": "wants_detail", "msg": "please be more clear"}
+{"mood": "wants_detail", "msg": "why are you being so rushed"}
+{"mood": "wants_detail", "msg": "from now on explain it clearly with lot of details"}
+{"mood": "wants_detail", "msg": "That's too short, go into more depth."}
+{"mood": "wants_detail", "msg": "Can you expand on that with a few more examples?"}
