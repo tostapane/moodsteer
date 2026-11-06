@@ -68,25 +68,36 @@ def respond(msg, sid, use_steered, use_baseline, steered, baseline, mood_html):
         steered = steered + [user, {"role": "assistant", "content": ""}]
     if use_baseline:
         baseline = baseline + [user, {"role": "assistant", "content": ""}]
-    done, status = [], ""
+    yield "", sid, steered, baseline, mood_html, ""  # the box is cleared here and left alone from now on
+
+    def view(pane=None, text=""):
+        """gr.update() = no change: what's being typed stays, and the pane not being written keeps its scroll."""
+        return (gr.update(), sid, steered if pane == "steered" else gr.update(),
+                baseline if pane == "baseline" else gr.update(), mood_html, text)
+
+    done = []
     while (e := events.get()) is not None:
+        pane, status = None, ""
         if e["type"] == "stage":
             status = STAGES[e["stage"]]
         elif e["type"] == "detected":
             mood_html = panel(e["scores"], e["alphas"])
             done.append(f"mood {e['seconds']:.1f}s")
         elif e["type"] == "token":
-            (steered if e["stream"] == "steered" else baseline)[-1]["content"] += e["text"]
+            pane = e["stream"]
+            (steered if pane == "steered" else baseline)[-1]["content"] += e["text"]
         elif e["type"] == "replied":
             done.append(f"{e['stream']} {e['words']} words in {e['seconds']:.1f}s")
         elif e["type"] == "error":
             done.append(f"error: {e['error']}")
-        yield "", sid, steered, baseline, mood_html, " · ".join(done + ([status] if status else []))
-        status = ""
-    for pane, on in ((steered, use_steered), (baseline, use_baseline)):
-        if on and not pane[-1]["content"]:
-            pane[-1]["content"] = "(stopped)"
-    yield "", sid, steered, baseline, mood_html, " · ".join(done + (["stopped"] if STOP.is_set() else []))
+        yield view(pane, " · ".join(done + ([status] if status else [])))
+    changed = False
+    for side, on in ((steered, use_steered), (baseline, use_baseline)):
+        if on and not side[-1]["content"]:
+            side[-1]["content"], changed = "(stopped)", True
+    text = " · ".join(done + (["stopped"] if STOP.is_set() else []))
+    yield (gr.update(), sid, steered if changed else gr.update(), baseline if changed else gr.update(),
+           mood_html, text)
 
 
 def new_chat(sid):
@@ -115,7 +126,8 @@ with gr.Blocks(title="Moodsteer") as demo:
         stop = gr.Button("Stop", scale=1)
         clear = gr.Button("New chat", scale=1)
     turn = box.submit(respond, [box, sid, use_steered, use_baseline, steered, baseline, mood],
-                      [box, sid, steered, baseline, mood, status], trigger_mode="multiple", concurrency_limit=None)
+                      [box, sid, steered, baseline, mood, status], trigger_mode="multiple", concurrency_limit=None,
+                      show_progress="hidden")
     stop.click(STOP.set, queue=False)
     clear.click(new_chat, [sid], [box, steered, baseline, mood, status], cancels=[turn])
 

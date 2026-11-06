@@ -65,3 +65,10 @@
 {"mood": "wants_detail", "msg": "from now on explain it clearly with lot of details"}
 {"mood": "wants_detail", "msg": "That's too short, go into more depth."}
 {"mood": "wants_detail", "msg": "Can you expand on that with a few more examples?"}
+{"mood": "neutral", "msg": "difference between blueberry and strawberry"}
+{"mood": "neutral", "msg": "i dont know what to cook tonight"}
+{"mood": "rushed", "msg": "explain very briefly what is a parachute"}
+{"mood": "rushed", "msg": "please dont procude wall of text"}
+{"mood": "rushed", "msg": "Shorter answers please."}
+{"mood": "rushed", "msg": "Just the key points, no long explanations."}
+{"mood": "rushed", "msg": "Too long, cut it down."}

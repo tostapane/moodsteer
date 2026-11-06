@@ -15,10 +15,10 @@ MOOD_DESC = {
     "frustrated": "annoyed that things aren't working, corrects the assistant",
     "rage":       "angry, shouting, insulting",
     "sad":        "discouraged, wants to give up, feels bad about themselves",
-    "rushed":     "in a hurry, or asks for shorter answers from now on",
+    "rushed":     "in a hurry, or asks for a shorter answer, or complains that answers are too long",
     "excited":    "happy, enthusiastic",
     "skeptical":  "doubts the assistant, asks for proof",
-    "wants_detail": "asks for longer, clearer or more detailed answers, or complains they are too short",
+    "wants_detail": "asks for a longer, clearer or more detailed answer, or complains that answers are too short",
 }
 
 
@@ -59,20 +59,29 @@ PROMPT = ("You judge the mood of one message a user sent to an AI assistant.\n"
           'Reply with JSON only, no other text, mood → intensity. Examples:\n'
           '"What is a tomato?" → {}\n'
           '"How do I change a tire?" → {}\n'
+          '"What should I eat for lunch?" → {}\n'
+          '"Explain in one sentence what a comet is." → {"rushed": 7}\n'
+          '"Stop writing so much." → {"rushed": 8}\n'
+          '"Can you go into more detail?" → {"wants_detail": 7}\n'
           '"This is wrong again." → {"frustrated": 6}\n'
           '"I give up, none of this makes sense to me." → {"sad": 6, "confused": 5}')
 
 
+last_reply = ""  # the detector's raw answer, for the trace
+
+
 def detect_llm(msg: str) -> dict[str, float] | None:
+    global last_reply
     from core.model import get_model
 
     model = get_model()
     model.set_alphas({})  # classify with the unsteered model
     reply = model.generate([{"role": "system", "content": PROMPT}, {"role": "user", "content": msg[:1000]}],
                            max_new_tokens=40)
+    last_reply = reply
     scores = {m: 0.0 for m in MOOD_DESC}
     try:
-        raw = json.loads(re.search(r"\{.*\}", reply, re.S).group())
+        raw = json.loads(re.search(r"\{.*?\}", reply, re.S).group())  # the first object: it may keep writing examples
         for mood, level in raw.items():
             mood = str(mood).strip().lower()
             if mood in scores:  # anything unknown is ignored
@@ -86,11 +95,27 @@ def detect_llm(msg: str) -> dict[str, float] | None:
 
 DETECTORS = {"probe": detect_probe, "llm": detect_llm}
 
+# explicit requests for longer or shorter answers: a keyword match, more reliable here than a 3B model
+ASKS_DETAIL = re.compile(r"more (detail|depth|clear|example)|lots? of detail|in detail|detailed|clearer|explain more"
+                         r"|something more|tell me more|too (short|brief)|so rushed|expand on|go deeper"
+                         r"|(not|n'?t|less)( be)?( so)? (brief|concise|short)", re.I)
+ASKS_SHORT = re.compile(r"\b(brief|briefly|concise|concisely|shorter|summary|tl;?dr)\b|too long|wall of text"
+                        r"|keep it short|in (one|a) (sentence|line)|one[- ]line|few words|key points|cut it down", re.I)
+
+
+def with_request(msg: str, scores: dict | None) -> dict | None:
+    """An explicit request always counts at full intensity, whatever the detector said."""
+    mood = "wants_detail" if ASKS_DETAIL.search(msg) else "rushed" if ASKS_SHORT.search(msg) else None
+    if mood is None:
+        return scores
+    scores = {**(scores or {m: 0.0 for m in MOOD_DESC}), "rushed": 0.0, "wants_detail": 0.0, mood: 1.0}
+    return with_neutral(scores)
+
 
 def detect(msg: str) -> dict[str, float]:
     names = list(DETECTORS)
     for name in names[names.index(config.DETECTOR):]:
         scores = DETECTORS[name](msg)
         if scores is not None:
-            return scores
-    return with_neutral({m: 0.0 for m in MOOD_DESC})
+            return with_request(msg, scores)
+    return with_request(msg, with_neutral({m: 0.0 for m in MOOD_DESC}))

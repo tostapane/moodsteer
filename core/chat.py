@@ -14,6 +14,7 @@ from pathlib import Path
 import config
 from core.controller import capped, update
 from core.model import STOP, get_model
+import detector.detect
 from detector.detect import detect
 
 SESSIONS = {}            # session_id → {"history": [...], "baseline_history": [...], "state": {axis: α}}
@@ -38,7 +39,8 @@ def chat(session_id: str, msg: str, steered: bool = True, baseline: bool = False
             out["reply"] = reply(s["history"], msg, alphas, "steered", emit)
         if baseline and not STOP.is_set():
             out["baseline"] = reply(s["baseline_history"], msg, {}, "baseline", emit)
-        log({"session_id": session_id, "msg": msg, "latency": time.time() - t, **out})
+        log({"session_id": session_id, "msg": msg, "latency": time.time() - t,
+             "detector_reply": detector.detect.last_reply, **out})
         return out
 
 

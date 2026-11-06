@@ -12,7 +12,7 @@ config.TRACE_FILE = "runs/smoke.jsonl"
 import core.model  # noqa: E402
 from core.chat import SESSIONS, chat  # noqa: E402
 from core.controller import capped, push  # noqa: E402
-from detector.detect import PROMPT, detect  # noqa: E402
+from detector.detect import PROMPT, detect, with_request  # noqa: E402
 
 # fake model doesn't answer JSON → detector can't answer → neutral, no steering
 r = chat("smoke-a", "WTF THIS IS USELESS!!!")
@@ -88,6 +88,20 @@ s = detect("I don't get it")
 assert s["confused"] == 1.0 and s["neutral"] == 0.0 and s["sad"] == 0.0, s
 JsonModel.answer = '{"bored": 8}'  # unknown mood → neutral
 assert detect("meh")["neutral"] == 1.0
+
+JsonModel.answer = '{"sad": 6}\n"What is rain?" → {}'  # it kept writing examples: the first object counts
+assert detect("meh")["sad"] == 0.6
+
+# explicit requests count whatever the detector says, and steer the very first reply
+JsonModel.answer = '{}'
+r = chat("smoke-k", "explain briefly how a helicopter flies")
+assert r["scores"]["rushed"] == 1.0 and r["alphas"]["concise"] == 1.0 and "concise=0.75" in r["reply"], r
+r = chat("smoke-k", "from now on explain it clearly with lot of details")
+assert r["scores"]["wants_detail"] == 1.0 and r["scores"]["rushed"] == 0.0 and "concise" not in r["alphas"], r
+for msg, mood in (("be very very concise", "rushed"), ("please dont procude wall of text", "rushed"),
+                  ("dont be so brief", "wants_detail"), ("please be more clear", "wants_detail")):
+    assert with_request(msg, None)[mood] == 1.0, msg
+assert with_request("what is rain?", None) is None
 
 # stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
 JsonModel.answer = '{}'

@@ -9,7 +9,7 @@ import time
 from collections import Counter
 
 import config
-from detector.detect import detect_llm, detect_probe
+from detector.detect import detect_llm, detect_probe, with_request
 
 
 def predict(scores):
@@ -29,22 +29,23 @@ def main():
     print(f"model {config.MODEL_ID} · {len(rows)} hand-written messages · chance ≈ {1 / len(config.MOODS):.0%}")
     for name, detect in (("llm", detect_llm), ("probe", detect_probe)):
         t = time.time()
-        scores = [detect(r["msg"]) for r in rows]
-        if all(s is None for s in scores):
+        raw = [detect(r["msg"]) for r in rows]
+        if all(s is None for s in raw):
             print(f"\n{name}: not available")
             continue
         seconds = (time.time() - t) / len(rows)
+        scores = [with_request(r["msg"], s) for r, s in zip(rows, raw)]
         preds = [predict(s) for s in scores]
         right = sum(p == r["mood"] for p, r in zip(preds, rows))
         print(f"\n{name}: {right}/{len(rows)} = {right / len(rows):.0%} · {seconds:.2f}s per message"
-              + (f" · {sum(s is None for s in scores)} unreadable answers" if None in scores else ""))
+              + (f" · {sum(s is None for s in raw)} unreadable answers" if None in raw else ""))
         for mood in config.MOODS:
             got = [p for p, r in zip(preds, rows) if r["mood"] == mood]
             wrong = Counter(p for p in got if p != mood)
             print(f"  {mood:<13} {got.count(mood)}/{len(got)}" + (f"   mistaken for {dict(wrong)}" if wrong else ""))
         print(f"  single-mood messages given more than one mood: {sum(len(present(s)) > 1 for s in scores)}/{len(rows)}")
 
-        got = [present(detect(r["msg"])) for r in mixed]
+        got = [present(with_request(r["msg"], detect(r["msg"]))) for r in mixed]
         exact = sum(g == set(r["moods"]) for g, r in zip(got, mixed))
         found = sum(len(g & set(r["moods"])) for g, r in zip(got, mixed))
         print(f"  mixed: {exact}/{len(mixed)} exactly right · {found}/{2 * len(mixed)} moods found")
