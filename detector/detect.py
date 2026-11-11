@@ -114,18 +114,24 @@ ASKS_PROSE = re.compile(r"\b(no|without|avoid|stop using)( any)? (bullets?( poin
                         r"|in prose|(one|single) paragraph", re.I)
 
 
-FALLBACK = 0.6  # intensity of a "shorter" request the model scored 0
+# how much shorter, read from the wording: the 3B model gets the direction of length requests wrong
+SHORT_MAX = re.compile(r"\bone (sentence|line|word)|in (one|a) (sentence|line)|one[- ]liner|few words|tl;?dr"
+                       r"|as (short|brief) as|very (very )?(short|brief|concise)", re.I)
+SHORT_LITTLE = re.compile(r"\b(a (little|bit|tad)|slightly|somewhat)\b", re.I)
+
+
+def shorter(msg: str) -> float:
+    return 1.0 if SHORT_MAX.search(msg) else 0.3 if SHORT_LITTLE.search(msg) else 0.6
 
 
 def with_request(msg: str, scores: dict | None) -> dict | None:
-    """An explicit request sets the direction. "Shorter" keeps the model's intensity, so it's graded.
-    "Longer" is always full: its target is no steering, and anything less would leave the answers short."""
-    got = scores or {}
+    """Explicit requests override the model. "Shorter" is graded by its wording (shorter()).
+    "More detail" is always full: its target is no steering, and anything less would leave the answers short."""
     asked = {}
     if ASKS_DETAIL.search(msg):
         asked = {"rushed": 0.0, "wants_detail": 1.0}
-    elif ASKS_SHORT.search(msg):
-        asked = {"rushed": got.get("rushed") or FALLBACK, "wants_detail": 0.0}
+    elif ASKS_SHORT.search(msg) or SHORT_MAX.search(msg):
+        asked = {"rushed": shorter(msg), "wants_detail": 0.0}
     if ASKS_PROSE.search(msg):
         asked["wants_prose"] = 1.0
     if not asked:
