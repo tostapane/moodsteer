@@ -12,7 +12,7 @@ config.TRACE_FILE = "runs/smoke.jsonl"
 import core.model  # noqa: E402
 from core.chat import SESSIONS, chat  # noqa: E402
 from core.controller import capped, push  # noqa: E402
-from detector.detect import PROMPT, detect, with_request  # noqa: E402
+from detector.detect import FALLBACK, PROMPT, detect, with_request  # noqa: E402
 
 # fake model doesn't answer JSON → detector can't answer → neutral, no steering
 r = chat("smoke-a", "WTF THIS IS USELESS!!!")
@@ -92,20 +92,24 @@ assert detect("meh")["neutral"] == 1.0
 JsonModel.answer = '{"sad": 6}\n"What is rain?" → {}'  # it kept writing examples: the first object counts
 assert detect("meh")["sad"] == 0.6
 
-# explicit requests count whatever the detector says, and steer the very first reply
+# explicit requests set the direction even when the model missed them, at FALLBACK intensity
 JsonModel.answer = '{}'
 r = chat("smoke-k", "explain briefly how a helicopter flies")
-assert r["scores"]["rushed"] == 1.0 and r["alphas"]["concise"] == 1.0 and "concise=0.75" in r["reply"], r
+assert r["scores"]["rushed"] == FALLBACK and r["alphas"]["concise"] == FALLBACK, r
 r = chat("smoke-k", "from now on explain it clearly with lot of details")
 assert r["scores"]["wants_detail"] == 1.0 and r["scores"]["rushed"] == 0.0 and "concise" not in r["alphas"], r
+JsonModel.answer = '{"rushed": 3, "wants_detail": 7}'  # the model's intensity is kept, the wrong direction dropped
+r = chat("smoke-m", "that was too long")
+assert r["scores"]["rushed"] == 0.3 and r["scores"]["wants_detail"] == 0.0 and abs(r["alphas"]["concise"] - 0.3) < 1e-9, r
+JsonModel.answer = '{}'
 for msg, mood in (("be very very concise", "rushed"), ("please dont procude wall of text", "rushed"),
                   ("dont be so brief", "wants_detail"), ("please be more clear", "wants_detail")):
-    assert with_request(msg, None)[mood] == 1.0, msg
+    assert with_request(msg, None)[mood] == (FALLBACK if mood == "rushed" else 1.0), msg
 assert with_request("what is rain?", None) is None
 for msg in ("no bullet points please", "dont use bullets", "answer without lists", "explain it in prose"):
     assert with_request(msg, None)["wants_prose"] == 1.0, msg
 r = chat("smoke-l", "no bullet points, and keep it short")  # both requests count
-assert r["alphas"]["structured"] == -1.0 and r["alphas"]["concise"] == 1.0, r
+assert r["alphas"]["structured"] == -1.0 and r["alphas"]["concise"] == FALLBACK, r
 assert with_request("what is a list comprehension? no list comprehension please", None) is None
 
 # stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
