@@ -1,12 +1,13 @@
-"""Can the model read moods on its own? The keyword rules in detector/detect.py are NOT used here.
-Same call as a chat turn (one message, no history). A mood counts if its score ≥ config.THRESHOLD.
-Right = exactly the expected moods, nothing missing or extra. An unreadable answer is always wrong, never neutral.
-Data, all hand-written:
-  data/moods_test.jsonl, data/moods_mixed_test.jsonl   seen while tuning the prompt: may flatter it, mistakes are listed
-  data/moods_holdout.jsonl                             the real score: never tune on these, mistakes aren't printed
-  data/moods_intensity.jsonl                           mild vs strong pairs: is a stronger mood scored higher?
-Run: python -m eval.detector   → summary, and every answer in runs/eval_detector.jsonl
-The probe needs python -m detector.build first."""
+"""How well does the model read moods on its own? The keyword rules are off.
+A mood counts at THRESHOLD or above, and a message is right only if the moods match exactly. Unreadable answers
+count as wrong.
+
+Data, hand-written:
+  data/moods_test.jsonl, data/moods_mixed_test.jsonl   used while tuning the prompt, so they may flatter it
+  data/moods_holdout.jsonl                             never tuned on: the real score
+  data/moods_intensity.jsonl                           mild/strong pairs: is the strong one scored higher?
+
+Run: python -m eval.detector   → summary, answers in runs/eval_detector.jsonl. The probe needs detector.build."""
 import json
 import math
 import re
@@ -27,7 +28,7 @@ def load(*paths):
 
 
 def ask(name, detect, msg):
-    """→ scores (None if unreadable) and the raw answer. Mood names we don't know make an answer unreadable too."""
+    """Scores (None if unreadable) and the raw answer. Unknown mood names make the answer unreadable."""
     scores = detect(msg)
     if name != "llm":
         return scores, ""
@@ -42,7 +43,7 @@ def present(scores):
 
 
 def share(k, n):
-    """k/n with its 95% range (Wilson): how far the true rate could be, given so few messages."""
+    """k/n with its 95% Wilson interval."""
     if not n:
         return "0/0"
     p, z = k / n, 1.96

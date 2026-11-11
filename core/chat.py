@@ -1,11 +1,13 @@
-"""One turn: detect the mood, update the steering memory, reply steered and/or unsteered, log.
-Steered off: no detection, the memory stays as it is. Each reply has its own history, and a reply that's off misses
-that message. core.model.STOP ends the turn early: what was written so far stays in the history.
-on_event(dict) gets live progress (used by the CLI and the web demo):
-  {"type": "stage", "stage": "detect" | "steered" | "baseline"}
-  {"type": "detected", "scores", "alphas", "seconds"}   alphas = the steering state after this message
-  {"type": "token", "stream": "steered" | "baseline", "text"}
-  {"type": "replied", "stream", "seconds", "words"}"""
+"""One chat turn: detect the mood, update the steering state, write the steered and/or baseline reply, log it.
+
+The two replies keep separate histories. With steering off the mood isn't detected and the state doesn't change.
+Setting core.model.STOP ends the turn early and keeps the partial reply.
+
+on_event receives progress events:
+    {"type": "stage", "stage": "detect" | "steered" | "baseline"}
+    {"type": "detected", "scores", "alphas", "seconds"}   alphas = the state after this message
+    {"type": "token", "stream": "steered" | "baseline", "text"}
+    {"type": "replied", "stream", "seconds", "words"}"""
 import json
 import threading
 import time

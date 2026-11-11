@@ -1,4 +1,4 @@
-"""End-to-end in FAKE mode, stdlib only. Run before every push: python tests/smoke.py"""
+"""End-to-end test in FAKE mode, stdlib only: python tests/smoke.py"""
 import os
 import sys
 

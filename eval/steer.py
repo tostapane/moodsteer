@@ -1,10 +1,10 @@
-"""Does steering change what it claims to, without changing weights or prompt? And what does it cost?
-For every axis with a property we can count, the same held-out questions are answered:
-  baseline   no steering
-  steer s    the axis vector × s added to the hidden state (s = fraction of a typical hidden state)
-  prompt     no steering, the pole's persona written in the system prompt: what you'd do without steering
-Cost = share of simple factual questions still answered correctly under the same condition.
-Run: python -m eval.steer [axis ...] [--strengths 0.2,0.4,0.8]   → table, and every reply in runs/eval_steer.jsonl"""
+"""Does each axis change what it claims to, and what does it cost?
+
+For each axis with a countable property, held-out questions are answered with no steering (baseline), with the
+vector at several strengths, and with the pole's persona in the system prompt instead. The cost is how many simple
+factual questions are still answered correctly under each condition.
+
+Run: python -m eval.steer [axis ...] [--strengths 0.2,0.4,0.8]   → table, replies in runs/eval_steer.jsonl"""
 import json
 import re
 import sys
@@ -15,7 +15,7 @@ import config
 from core.model import get_model
 from vectors.build import AXES
 
-# open questions, none of them used to build the vectors
+# none of these were used to build the vectors
 QUESTIONS = [
     "How do I reverse a string in Python?", "What is a hash table?", "Why do cats purr?",
     "How do I make a good cup of coffee?", "What is the difference between a list and a tuple in Python?",
@@ -23,7 +23,7 @@ QUESTIONS = [
     "What is an operating system?", "How do I start learning the guitar?", "Why do we have time zones?",
     "What is version control?",
 ]
-# cautious is measured on questions with no sure answer (on the ones above even the prompt barely hedges)
+# cautious only shows on questions with no sure answer
 UNCERTAIN = [
     "Will the stock market go up next month?", "Who will be the next US president?",
     "Is a glass of milk a day good for adults?", "What did Cleopatra look like?",
@@ -33,7 +33,7 @@ UNCERTAIN = [
     "What do dreams mean?", "How old is the oldest tree alive today?",
 ]
 AXIS_QUESTIONS = {"cautious": UNCERTAIN}
-# factual questions with a short answer: is the model still right when steered?
+# (question, accepted answers as a regex): the capability cost
 FACTS = [
     ("What is the capital of France?", "paris"), ("What is the capital of Japan?", "tokyo"),
     ("What is the capital of Italy?", "rome"), ("What is the capital of Canada?", "ottawa"),
@@ -89,12 +89,12 @@ TESTS = {
     "calm":       (-1, exclamations, "! per 100 words (enthusiastic pole)", "up"),
     "cautious":   (+1, hedges, "hedge words per 100 words", "up"),
 }
-ANSWER_TOKENS = 120
-FACT_TOKENS = 40
+ANSWER_TOKENS = config.MAX_NEW_TOKENS  # same as the chat, so answers aren't cut short
+FACT_TOKENS = 100  # room for a hedge before the answer
 
 
 def answer(m, questions, alphas, systems, max_new_tokens):
-    """One batch: question i is answered with steering alphas[i] and system prompt systems[i]."""
+    """Answer questions[i] with steering alphas[i] and system prompt systems[i], in one batch."""
     m.set_alphas(alphas)
     convos = [[{"role": "system", "content": s}, {"role": "user", "content": q}] for q, s in zip(questions, systems)]
     out = m.generate_batch(convos, max_new_tokens)
@@ -102,13 +102,19 @@ def answer(m, questions, alphas, systems, max_new_tokens):
     return out
 
 
+def n_cut(m, replies, limit):
+    """Replies that hit the token limit, whose metric is unreliable."""
+    if not hasattr(m, "n_tokens"):  # FakeModel
+        return 0
+    return sum(m.n_tokens(r) >= limit - 2 for r in replies)  # re-tokenizing can be off by a token
+
+
 def correct(reply, expected):
     return bool(re.search(rf"\b({expected})\b", reply.lower()))
 
 
 def run(m, conditions, questions=QUESTIONS):
-    """conditions: {name: (alphas, system prompt)} → {name: (replies to questions, replies to FACTS)}.
-    All conditions go in one batch: each row has its own steering."""
+    """{name: (alphas, system prompt)} → {name: (replies, fact replies)}. All conditions share one batch."""
     names = list(conditions)
     out = {}
     for qs, tokens in ((questions, ANSWER_TOKENS), ([q for q, _ in FACTS], FACT_TOKENS)):
@@ -120,16 +126,17 @@ def run(m, conditions, questions=QUESTIONS):
     return out
 
 
-def report(axis, results, log):
+def report(m, axis, results, log):
     sign, metric, label, better = TESTS[axis]
     print(f"\n{axis} ({'+' if sign > 0 else '−'} pole) · {label}, should go {better}")
-    print(f"  {'condition':<12} {'metric':>7}   facts right")
+    print(f"  {'condition':<12} {'metric':>7}   facts right   cut off (answers, facts)")
     for name, (replies, facts) in results.items():
         value = sum(map(metric, replies)) / len(replies)
         right = sum(correct(r, e) for r, (_, e) in zip(facts, FACTS))
-        print(f"  {name:<12} {value:>7.1f}   {right}/{len(FACTS)}")
+        cut = n_cut(m, replies, ANSWER_TOKENS), n_cut(m, facts, FACT_TOKENS)
+        print(f"  {name:<12} {value:>7.1f}   {right:>5}/{len(FACTS)}   {cut[0]}/{len(replies)}, {cut[1]}/{len(facts)}")
         log.write(json.dumps({"axis": axis, "condition": name, "metric": value, "facts_right": right,
-                              "facts_total": len(FACTS), "replies": replies, "facts": facts}) + "\n")
+                              "facts_total": len(FACTS), "cut": cut, "replies": replies, "facts": facts}) + "\n")
 
 
 def main():
@@ -147,13 +154,13 @@ def main():
     with open("runs/eval_steer.jsonl", "a") as log:
         for axis in axes:
             sign = TESTS[axis][0]
-            # baseline rides in the same batch: cautious has its own questions, so it needs its own baseline
+            # a baseline per axis, since cautious uses its own questions
             conditions = {"baseline": ({}, config.SYSTEM_PROMPT)}
-            # the model multiplies alpha by config.STRENGTH, so alpha = s / STRENGTH gives strength s
+            # the model multiplies alpha by STRENGTH, so this gives strength s
             conditions.update({f"steer {s}": ({axis: sign * s / config.STRENGTH.get(axis, 0.1)}, config.SYSTEM_PROMPT)
                                for s in strengths})
             conditions["prompt"] = ({}, AXES[axis][0 if sign > 0 else 1])
-            report(axis, run(m, conditions, AXIS_QUESTIONS.get(axis, QUESTIONS)), log)
+            report(m, axis, run(m, conditions, AXIS_QUESTIONS.get(axis, QUESTIONS)), log)
             log.flush()
     print(f"\ndone in {time.time() - t:.0f}s · every reply in runs/eval_steer.jsonl")
 

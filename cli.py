@@ -1,10 +1,7 @@
-"""Terminal chat that shows every step live: mood detection, steering, streamed replies, status bar.
-Runs the whole pipeline in-process.
-  python cli.py                          # Qwen2.5-3B on GPU (override with MODEL_ID / DTYPE env vars)
-  MODEL_ID=... python cli.py             # another model: rebuild the vectors for it first (python -m vectors.build)
-  FAKE=1 python cli.py                   # no GPU, canned replies
-Commands: /steer  toggle the steered reply · /compare  toggle the baseline reply · /reset  new conversation · /quit
-Ctrl+C stops the reply in progress."""
+"""Terminal chat showing each step live: detected mood, steering state, streamed replies.
+  python cli.py           Qwen2.5-3B on GPU (MODEL_ID / DTYPE to change; another model needs its own vectors)
+  FAKE=1 python cli.py    canned replies, no GPU
+Commands: /steer and /compare toggle each reply, /reset, /quit. Ctrl+C stops the current reply."""
 import itertools
 import re
 import shutil
@@ -19,7 +16,7 @@ from core.controller import push
 from core.model import STOP, get_model
 
 TTY = sys.stdout.isatty()
-MAX_WIDTH = 100  # replies wrap at the terminal width, capped here so lines stay readable full screen
+MAX_WIDTH = 100  # wrap width cap, so lines stay readable on a wide terminal
 INDENT = len("baseline › ")
 COLORS = {"dim": 2, "bold": 1, "cyan": 36, "green": 32, "yellow": 33, "red": 31, "magenta": 35}
 
@@ -33,8 +30,8 @@ class Screen:
 
     def __init__(self):
         self.lock = threading.RLock()
-        self.busy = None        # what we're doing right now, None = idle
-        self.status = ""        # right part of the bar
+        self.busy = None        # current task, None = idle
+        self.status = ""        # text after the task
         self.frames = itertools.cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
         if TTY:
             sys.stdout.write("\n")

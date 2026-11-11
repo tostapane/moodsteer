@@ -1,7 +1,7 @@
-"""Web demo: the same view as the CLI. Steering state, mood of each message, steered and/or baseline reply.
-  python app.py            # local: http://localhost:7860
-  python app.py --share    # public link (e.g. from a notebook)
-Notebook: import app; app.demo.launch(share=True)   (MODEL_ID / DTYPE env vars, if any, before importing)"""
+"""Web demo, same view as the CLI.
+  python app.py            http://localhost:7860
+  python app.py --share    public link
+In a notebook: import app; app.demo.launch(share=True). Set MODEL_ID / DTYPE before importing."""
 import queue
 import sys
 import threading
@@ -23,7 +23,7 @@ def meter(v, width=12):
 
 
 def panel(scores, alphas):
-    """Two monospace tables: the steering state per axis, kept across messages, and this message's moods."""
+    """Two tables: the steering state per axis, and this message's moods."""
     state = ["STEERING STATE (kept across messages)"]
     for axis in config.STRENGTH:
         a = alphas.get(axis, 0.0)
@@ -71,7 +71,7 @@ def respond(msg, sid, use_steered, use_baseline, steered, baseline, mood_html):
     yield "", sid, steered, baseline, mood_html, ""  # the box is cleared here and left alone from now on
 
     def view(pane=None, text=""):
-        """gr.update() = no change: what's being typed stays, and the pane not being written keeps its scroll."""
+        """gr.update() leaves a component alone: the textbox keeps what's typed, the idle pane keeps its scroll."""
         return (gr.update(), sid, steered if pane == "steered" else gr.update(),
                 baseline if pane == "baseline" else gr.update(), mood_html, text)
 

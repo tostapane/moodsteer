@@ -1,6 +1,5 @@
-"""Which layer steers best? One axis's vector is built at several layers, and each one steers the same questions
-with the same strength. Too early and the model can't use it, too late and there's nothing left to change.
-Run: python -m eval.layers [axis] [--strength 0.2]   → table, and every reply in runs/eval_layers.jsonl"""
+"""Which layer steers best? Builds one axis's vector at every 4th layer and steers the same questions with each.
+Run: python -m eval.layers [axis] [--strength 0.2]   → table, replies in runs/eval_layers.jsonl"""
 import sys
 import time
 from pathlib import Path
@@ -32,7 +31,7 @@ def main():
         conditions[f"layer {layer}"] = ({name: alpha}, config.SYSTEM_PROMPT)
     Path("runs").mkdir(exist_ok=True)
     with open("runs/eval_layers.jsonl", "a") as log:
-        report(axis, run(m, conditions), log)
+        report(m, axis, run(m, conditions), log)
     print(f"\ndone in {time.time() - t:.0f}s")
 
 

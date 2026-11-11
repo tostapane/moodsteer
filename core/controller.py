@@ -1,5 +1,4 @@
-"""Steering memory. One state per axis (-1..1, sign = pole) that persists across turns.
-A mood moves only the axes it lists in config.MAPPING. Other axes, and any neutral message, change nothing."""
+"""Steering state: one value per axis in -1..1 (the sign picks the pole), kept across turns."""
 import math
 
 import config
@@ -8,7 +7,7 @@ import config
 def update(state: dict, scores: dict) -> dict:
     new = dict(state)
     moods = [(v, m) for m, v in scores.items() if m != "neutral" and v >= config.THRESHOLD]
-    for v, m in sorted(moods):  # weakest first: the strongest mood has the last word on a shared axis
+    for v, m in sorted(moods):  # weakest first, so the strongest mood wins on a shared axis
         for axis, (target, speed) in config.MAPPING.get(m, {}).items():
             now = new.get(axis, 0.0)
             new[axis] = now + v * speed * (target - now)
@@ -16,11 +15,11 @@ def update(state: dict, scores: dict) -> dict:
 
 
 def push(alphas: dict) -> float:
-    """Total push of these alphas, assuming the axis vectors point in unrelated directions."""
+    """Combined push of these alphas, treating the axis vectors as orthogonal."""
     return math.sqrt(sum((a * config.STRENGTH.get(axis, 0.1)) ** 2 for axis, a in alphas.items()))
 
 
 def capped(alphas: dict) -> dict:
-    """What actually steers a reply: the same alphas, scaled down if their total push is over config.MAX_PUSH."""
+    """The alphas scaled down so their combined push is at most config.MAX_PUSH."""
     p = push(alphas)
     return alphas if p <= config.MAX_PUSH else {axis: a * config.MAX_PUSH / p for axis, a in alphas.items()}

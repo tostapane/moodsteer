@@ -1,5 +1,5 @@
-"""Load the model, add steering vectors to its activations, generate.
-Vector file (artifacts/vectors/<axis>.pt): {"vec": Tensor[d_model], "layer": int}. Strength: config.STRENGTH."""
+"""Model loading, the steering hook, generation.
+A vector file (artifacts/vectors/<axis>.pt) holds {"vec": Tensor[d_model], "layer": int}."""
 import os
 import random
 import threading
@@ -13,7 +13,7 @@ STOP = threading.Event()  # set it to end the generation in progress
 
 
 class FakeModel:
-    """No torch, no GPU: canned replies and random activations. For laptop dev and tests."""
+    """Canned replies and random activations, without torch or a GPU. For development and tests."""
     layers = [None] * 4
 
     def __init__(self):
@@ -64,7 +64,7 @@ class Model:
 
         self.torch = torch
         self.tok = AutoTokenizer.from_pretrained(config.MODEL_ID)
-        self.tok.padding_side = "left"  # batched generation
+        self.tok.padding_side = "left"  # left padding for batched generation
         if self.tok.pad_token is None:
             self.tok.pad_token = self.tok.eos_token
         self.model = AutoModelForCausalLM.from_pretrained(config.MODEL_ID, dtype=getattr(torch, config.DTYPE),
@@ -87,13 +87,13 @@ class Model:
             if v is None:
                 return None
             h = out[0] if isinstance(out, tuple) else out
-            h = h + v[:, None, :].to(h.device, h.dtype)  # same vector on every token; 1 row = whole batch
+            h = h + v[:, None, :].to(h.device, h.dtype)  # every position; a single row applies to the whole batch
             return (h,) + out[1:] if isinstance(out, tuple) else h
         return hook
 
     def set_alphas(self, alphas):
-        """alphas are -1..1 per axis (sign picks the pole), scaled by config.STRENGTH. Unknown axes are skipped.
-        A list of dicts steers each row of the next batch differently (one dict per conversation)."""
+        """alphas: {axis: -1..1}, scaled by config.STRENGTH; unknown axes are skipped.
+        A list of dicts steers each row of the next batch separately."""
         rows = alphas if isinstance(alphas, list) else [alphas]
         self.steer = {}
         for r, row in enumerate(rows):
@@ -119,7 +119,7 @@ class Model:
         return len(self.tok(text, add_special_tokens=False).input_ids)
 
     def generate(self, messages, max_new_tokens=None, on_token=None):
-        """on_token(text) is called with each new piece of text as it is generated."""
+        """on_token(text) gets each piece of text as it is generated."""
         if on_token is None:
             return self.generate_batch([messages], max_new_tokens)[0]
         from transformers import TextIteratorStreamer
@@ -138,7 +138,7 @@ class Model:
         return reply.strip()
 
     def generate_batch(self, convos, max_new_tokens=None):
-        """Runs in chunks of config.BATCH_SIZE to bound memory. Per-row steering follows its rows."""
+        """Generates in chunks of config.BATCH_SIZE; per-row steering follows its rows."""
         steer, out, n = self.steer, [], config.BATCH_SIZE
         for i in range(0, len(convos), n):
             self.steer = {k: v[i:i + n] if len(v) == len(convos) else v for k, v in steer.items()}
@@ -156,8 +156,7 @@ class Model:
         return [self.tok.decode(o[enc.input_ids.shape[1]:], skip_special_tokens=True).strip() for o in out]
 
     def acts(self, texts, layer=None, starts=None):
-        """Unsteered hidden state at `layer`, averaged over tokens[start:] of each text → Tensor[n, d_model].
-        Default: middle layer, all tokens."""
+        """Unsteered hidden state at `layer` (default: middle), averaged over tokens[start:] → Tensor[n, d_model]."""
         layer = len(self.layers) // 2 if layer is None else layer
         out = []
         with self.unsteered(), self.torch.no_grad():

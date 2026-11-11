@@ -1,11 +1,10 @@
-"""Build the mood probe: one direction per mood in the model's activation space.
-1. Examples: data/moods/<mood>.txt, one user message per line (neutral.txt = the baseline).
-   Missing files are written by the model itself; edit, extend or replace them freely.
-2. Each message → hidden state at READ_LAYER averaged over all its tokens.
-3. direction(mood) = mean(mood messages) − mean(neutral messages), normalised.
-   Calibration: lo = 90th percentile of neutral projections, hi = median projection of the mood's own messages.
-4. Every 5th example is held out and used to print accuracy.
-Run: python -m detector.build [--regen]   → artifacts/moods.pt"""
+"""Build the experimental mood probe (artifacts/moods.pt): one direction per mood in activation space.
+
+Each message in data/moods/<mood>.txt is read at READ_LAYER and averaged over its tokens. A mood's direction is
+mean(mood) − mean(neutral). Scores are calibrated so 0 is the 90th percentile of neutral messages and 1 is the
+mood's median. Missing example files are written by the model. Every 5th example is held out for the accuracy check.
+
+Run: python -m detector.build [--regen]"""
 import re
 import sys
 from pathlib import Path
@@ -56,7 +55,7 @@ def main(regen=False):
     torch.save(probe, config.MOODS_FILE)
     print(f"saved {config.MOODS_FILE} (layer {layer})")
 
-    # held-out accuracy: predicted = strongest mood if its score > 0.5, else neutral
+    # predicted mood: the top score if above 0.5, otherwise neutral
     print("\nheld-out accuracy:")
     right = total = 0
     for k, X in test.items():

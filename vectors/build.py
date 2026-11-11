@@ -1,19 +1,14 @@
-"""Build steering vectors with contrastive completions (CAA).
-Each vector is an AXIS between two poles (concise ↔ long): +α pushes to the first pole, −α to the second.
-1. Pairs: for each question, a positive and a negative ANSWER → data/pairs/<axis>.jsonl
-   {"question", "positive", "negative"}. Missing files are written by the model using the personas below
-   (all in one batch); edit or replace them freely. Personas are only used to WRITE these example answers.
-   Pairs are plain text, model-independent: generate once on the GPU, commit, and every
-   later build only measures activations — seconds.
-   Pairs whose two answers are almost the same (the model ignored the persona) are dropped: they only add noise.
-2. Extraction: [neutral system prompt + question + answer] goes through the model, the hidden state at
-   STEER_LAYER is averaged over the ANSWER tokens only. vec = mean(positive) − mean(negative).
-   No persona/instruction is in the text at this point: the vector captures the model producing the behaviour.
-   The vector is rescaled to the size of a typical hidden state, so strength 0.1 = a push of 10% of it,
-   the same for every axis.
-3. Chat time: the vector is added to the residual stream by a forward hook (core/model.py). No prompt changes.
-Run: python -m vectors.build [axis ...] [--regen]   → artifacts/vectors/<axis>.pt
-Then pick each axis's strength with python -m vectors.tune → config.STRENGTH."""
+"""Build the steering vectors (contrastive activation addition).
+
+Each axis has two poles, e.g. concise ↔ long: +α pushes toward the first, −α toward the second.
+1. Pairs: for each question the model writes one answer per pole, prompted with the personas in AXES, into
+   data/pairs/<axis>.jsonl. They're plain text, so they're committed and reused; --regen rewrites them.
+   Pairs whose two answers are nearly identical are dropped.
+2. Vector: each answer goes through the model after a neutral system prompt (no persona), and the hidden state at
+   STEER_LAYER is averaged over the answer tokens. vec = mean(positive) − mean(negative), rescaled to the size of
+   a typical hidden state so a given strength is the same push on every axis.
+
+Run: python -m vectors.build [axis ...] [--regen], then pick strengths with python -m vectors.tune."""
 import difflib
 import json
 import sys
@@ -56,7 +51,7 @@ QUESTIONS = [
     "What is a neural network?", "How should I prepare for a job interview?", "How do I read a CSV in pandas?",
     "What causes the seasons?", "How do I stop procrastinating?", "What is the difference between RAM and storage?",
 ]
-# the "accountable" axis needs the user to be complaining about a previous answer
+# accountable needs a user complaining about a previous answer
 COMPLAINTS = [
     "Your answer about sorting lists was wrong, it didn't work.", "That explanation of the sky was incorrect.",
     "I did what you said and I still get the KeyError.", "Your API explanation confused me even more.",
@@ -71,8 +66,7 @@ COMPLAINTS = [
     "Your pandas code throws an error.", "You explained the seasons wrong, it's not the distance.",
     "Your procrastination tips are useless.", "You said RAM and storage are the same, that's wrong.",
 ]
-# the "cautious" axis needs questions with no sure answer: on "how do I sort a list" there's nothing to doubt,
-#   so both personas wrote the same confident answer and the vector was noise
+# cautious needs questions with no sure answer: on plain questions both personas answer the same way
 UNCERTAIN = [
     "Will it rain in London next Tuesday?", "What will the price of Bitcoin be next year?",
     "Who will win the next football World Cup?", "Is intermittent fasting good for your health?",
@@ -87,7 +81,7 @@ UNCERTAIN = [
     "Why did the Neanderthals go extinct?", "Will my sourdough rise better in a colder kitchen?",
     "How long will my laptop battery last?", "What is dark matter made of?",
 ]
-ANSWER_TOKENS = 60  # the style shows in the first sentences; longer answers only cost generation time
+ANSWER_TOKENS = 60  # the style shows in the first sentences
 MAX_SIMILARITY = 0.8  # drop pairs whose answers are more alike than this (difflib ratio)
 
 
@@ -96,7 +90,7 @@ def questions(name):
 
 
 def generate_pairs(names, m):
-    """Write data/pairs/<name>.jsonl for all `names` with ONE batched generation (faster than one batch each)."""
+    """Write data/pairs/<name>.jsonl for each name, in one batched generation."""
     convos = [[{"role": "system", "content": persona}, {"role": "user", "content": q}]
               for name in names for persona in AXES[name] for q in questions(name)]
     t = time.time()
@@ -129,14 +123,14 @@ def build(name, m, layer=None):
     neg = m.acts([p + r["negative"] for p, r in zip(prefixes, rows)], layer, starts)
     vec = pos.mean(0) - neg.mean(0)
     size = torch.cat([pos, neg]).norm(dim=1).mean()  # a typical hidden state
-    strength = (vec.norm() / size).item()            # how far apart the two poles are, before rescaling
+    strength = (vec.norm() / size).item()            # distance between the poles, before rescaling
     print(f"{name:<11} {len(rows):>5}  {'█' * max(1, round(strength * 40))} {strength:.0%}"
           + ("  weak" if strength < 0.08 else ""))
     return {"vec": vec / vec.norm() * size, "layer": layer}
 
 
 def similarity(vectors):
-    """Cosine similarity between axes: two axes near ±1 push the same direction and add up when combined."""
+    """Cosine similarity between axes. Near ±1, two axes push the same direction and add up when combined."""
     names = list(vectors)
     print("\nsimilarity   " + " ".join(f"{n[:6]:>6}" for n in names))
     for a in names:

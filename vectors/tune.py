@@ -1,7 +1,6 @@
-"""Show how each axis changes one reply as the strength grows, to pick config.STRENGTH.
-Run: python -m vectors.tune [axis ...] [--prompt "..."] [--neg]
-  --neg  push toward the second pole (e.g. calm → enthusiastic)
-Read each axis top to bottom: pick the largest strength where the reply changed but is still good."""
+"""One reply per strength for each axis, to pick config.STRENGTH: the largest strength where the reply has
+clearly changed and is still good.
+Run: python -m vectors.tune [axis ...] [--prompt "..."] [--neg]   (--neg pushes toward the second pole)"""
 import shutil
 import sys
 

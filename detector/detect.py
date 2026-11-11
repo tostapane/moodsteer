@@ -1,8 +1,9 @@
-"""Mood detection: message → mood scores 0..1.
-probe = project the model's activations, averaged over the whole user message, onto mood directions
-        (built by detector/build.py). No generation, ~one forward pass.
-llm   = the model reads the message and lists the moods present, each with intensity 0-10, as JSON.
-config.DETECTOR picks where to start (probe → llm). If nothing can answer: neutral, i.e. no steering."""
+"""Mood detection: message → score per mood in 0..1.
+
+llm    the model lists the moods in the message as JSON, each with an intensity 0-10.
+probe  experimental: projects the message's activations onto mood directions from detector/build.py.
+
+config.DETECTOR picks the first one to try, the next is the fallback. If none answers, the message is neutral."""
 import json
 import re
 from pathlib import Path
@@ -27,8 +28,6 @@ def with_neutral(scores):
     return scores
 
 
-# ---- probe -------------------------------------------------------------------------------------
-
 _probe = None
 
 
@@ -39,16 +38,14 @@ def detect_probe(msg: str) -> dict[str, float] | None:
             return None
         import torch
         _probe = torch.load(config.MOODS_FILE)
-    from core.model import get_model  # lazy: avoids a circular import
+    from core.model import get_model  # here to avoid a circular import
 
     p = _probe
-    h = get_model().acts([msg], p["layer"])[0]                   # mean over every token of the message
-    proj = p["dirs"] @ (h - p["mu"])                             # one number per mood
-    s = ((proj - p["lo"]) / (p["hi"] - p["lo"])).clamp(0, 1)     # 0 ≈ neutral, 1 ≈ typical example
+    h = get_model().acts([msg], p["layer"])[0]
+    proj = p["dirs"] @ (h - p["mu"])
+    s = ((proj - p["lo"]) / (p["hi"] - p["lo"])).clamp(0, 1)     # 0 = neutral, 1 = a typical example
     return with_neutral(dict(zip(p["moods"], s.tolist())))
 
-
-# ---- llm ---------------------------------------------------------------------------------------
 
 PROMPT = ("You judge the mood of one message a user sent to an AI assistant.\n"
           "List only the moods clearly present, at most 3. Most messages have no mood.\n"
@@ -67,7 +64,7 @@ PROMPT = ("You judge the mood of one message a user sent to an AI assistant.\n"
           '"I give up, none of this makes sense to me." → {"sad": 6, "confused": 5}')
 
 
-last_reply = ""  # the detector's raw answer, for the trace
+last_reply = ""  # raw model output, logged in the trace
 
 
 def detect_llm(msg: str) -> dict[str, float] | None:
@@ -75,27 +72,25 @@ def detect_llm(msg: str) -> dict[str, float] | None:
     from core.model import get_model
 
     model = get_model()
-    model.set_alphas({})  # classify with the unsteered model
+    model.set_alphas({})  # detect without steering
     reply = model.generate([{"role": "system", "content": PROMPT}, {"role": "user", "content": msg[:1000]}],
                            max_new_tokens=40)
     last_reply = reply
     scores = {m: 0.0 for m in MOOD_DESC}
     try:
-        raw = json.loads(re.search(r"\{.*?\}", reply, re.S).group())  # the first object: it may keep writing examples
+        raw = json.loads(re.search(r"\{.*?\}", reply, re.S).group())  # first object only: it sometimes keeps writing examples
         for mood, level in raw.items():
             mood = str(mood).strip().lower()
-            if mood in scores:  # anything unknown is ignored
+            if mood in scores:
                 scores[mood] = min(10.0, max(0.0, float(level))) / 10
     except (AttributeError, ValueError, TypeError):
         return None
     return with_neutral(scores)
 
 
-# ---- entry point -------------------------------------------------------------------------------
-
 DETECTORS = {"probe": detect_probe, "llm": detect_llm}
 
-# explicit requests about the answer's length or shape: a keyword match, more reliable here than a 3B model
+# explicit requests about length or format: regexes catch these more reliably than the 3B model
 ASKS_DETAIL = re.compile(r"more (detail|depth|clear|example)|lots? of detail|in detail|detailed|clearer|explain more"
                          r"|something more|tell me more|too (short|brief)|so rushed|expand on|go deeper"
                          r"|(not|n'?t|less)( be)?( so)? (brief|concise|short)", re.I)
@@ -108,7 +103,7 @@ ASKS_PROSE = re.compile(r"\b(no|without|avoid|stop using)( any)? (bullets?( poin
 
 
 def with_request(msg: str, scores: dict | None) -> dict | None:
-    """An explicit request always counts at full intensity, whatever the detector said."""
+    """Explicit requests override the detector, at full intensity."""
     asked = {}
     if ASKS_DETAIL.search(msg):
         asked = {"rushed": 0.0, "wants_detail": 1.0}
