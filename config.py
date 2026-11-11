@@ -17,7 +17,7 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))  # rows per generate call: lower
 # "llm": the model lists the message's moods as JSON. "probe": experimental, needs detector/build.py.
 DETECTOR = os.getenv("DETECTOR", "llm")
 MOODS = ["neutral", "curious", "confused", "frustrated", "rage", "sad", "rushed", "excited", "skeptical",
-         "wants_detail", "wants_prose"]
+         "wants_detail"]
 
 # a mood counts only at this intensity (0..1) or above
 THRESHOLD = 0.3
@@ -27,7 +27,7 @@ THRESHOLD = 0.3
 MAPPING = {
     "neutral":    {},
     "curious":    {"cautious": (0.5, 0.5), "concise": (0.0, 0.25), "direct": (0.0, 0.25)},
-    "confused":   {"simple": (1.0, 0.8), "structured": (0.7, 0.8), "concise": (0.0, 0.5)},
+    "confused":   {"simple": (1.0, 0.8), "concise": (0.0, 0.5)},
     "frustrated": {"concise": (0.55, 0.8), "direct": (0.6, 0.8), "accountable": (0.6, 0.8)},
     "rage":       {"calm": (1.0, 1.0), "concise": (0.45, 1.0), "accountable": (0.8, 1.0)},
     "sad":        {"warm": (1.0, 0.8), "calm": (0.5, 0.8), "concise": (0.0, 0.5), "direct": (0.0, 0.5)},
@@ -35,19 +35,18 @@ MAPPING = {
     "excited":    {"calm": (-0.5, 0.8)},
     "skeptical":  {"cautious": (1.0, 0.8)},
     "wants_detail": {"concise": (0.0, 1.0), "direct": (0.0, 1.0)},
-    "wants_prose":  {"structured": (-1.0, 1.0)},  # set by a keyword rule, the model isn't asked
 }
 
 # name of each axis's negative pole, for display
 POLES = {"concise": "long", "warm": "cold", "calm": "enthusiastic", "simple": "technical", "direct": "roundabout",
-         "cautious": "overconfident", "structured": "freeform", "accountable": "defensive"}
+         "cautious": "overconfident", "accountable": "defensive"}
 
 # how hard each axis pushes at α = ±1, as a fraction of a typical hidden state.
 # Pick with vectors.tune, check with eval.steer. On 3B, 0.8 starts costing facts (cautious the most) and 2.0 breaks
 # the model; 0.6 leaves room because a mood pushes 2-3 axes at once. warm, direct and accountable are unmeasured.
 STRENGTH = {
     "concise": 0.6, "warm": 0.3, "calm": 0.6, "simple": 0.6,
-    "direct": 0.3, "cautious": 0.4, "structured": 0.3, "accountable": 0.3,
+    "direct": 0.3, "cautious": 0.4, "accountable": 0.3,
 }
 
 # cap on the combined push of one reply, same unit as STRENGTH. Above it all axes shrink together for that

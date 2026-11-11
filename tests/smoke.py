@@ -72,9 +72,9 @@ JsonModel.answer = '{"curious": 6}'  # curious eases concise a little, and adds 
 r = chat("smoke-g", "why?")
 assert abs(r["alphas"]["concise"] - 0.85) < 1e-9 and abs(r["alphas"]["cautious"] - 0.15) < 1e-9, r
 
-JsonModel.answer = '{"wants_detail": 10}'  # asking for detail switches concise and direct off, keeps the rest
+JsonModel.answer = '{"wants_detail": 10}'  # "tell me more" eases concise by the request's amount, keeps the rest
 r = chat("smoke-g", "tell me more")
-assert "concise" not in r["alphas"] and "direct" not in r["alphas"] and "cautious" in r["alphas"], r
+assert abs(r["alphas"]["concise"] - 0.85 * 0.4) < 1e-9 and "cautious" in r["alphas"], r
 
 JsonModel.answer = '{"rushed": 8, "frustrated": 6}'  # both count, the stronger applies last
 r = chat("smoke-h", "still broken, hurry")
@@ -96,7 +96,7 @@ assert detect("meh")["sad"] == 0.6
 JsonModel.answer = '{}'
 r = chat("smoke-k", "explain briefly how a helicopter flies")
 assert r["scores"]["rushed"] == 0.6 and r["alphas"]["concise"] == 0.6, r
-r = chat("smoke-k", "from now on explain it clearly with lot of details")
+r = chat("smoke-k", "from now on explain every single detail")
 assert r["scores"]["wants_detail"] == 1.0 and r["scores"]["rushed"] == 0.0 and "concise" not in r["alphas"], r
 JsonModel.answer = '{"excited": 6, "wants_detail": 8}'  # the model got the direction wrong: the request wins
 r = chat("smoke-m", "this is wayy too much, keep it a little shorter")
@@ -104,14 +104,18 @@ assert r["scores"]["rushed"] == 0.3 and r["scores"]["wants_detail"] == 0.0 and a
 JsonModel.answer = '{}'
 for msg, mood, level in (("be very very concise", "rushed", 1.0), ("one sentence only", "rushed", 1.0),
                          ("please dont procude wall of text", "rushed", 0.6), ("a bit shorter please", "rushed", 0.3),
-                         ("dont be so brief", "wants_detail", 1.0), ("please be more clear", "wants_detail", 1.0)):
+                         ("explain it in depth", "wants_detail", 1.0), ("dont be so brief", "wants_detail", 0.6),
+                         ("okay with little more detail?", "wants_detail", 0.3)):
     assert with_request(msg, None)[mood] == level, msg
 assert with_request("what is rain?", None) is None
-for msg in ("no bullet points please", "dont use bullets", "answer without lists", "explain it in prose"):
-    assert with_request(msg, None)["wants_prose"] == 1.0, msg
-r = chat("smoke-l", "no bullet points, and keep it short")  # both requests count
-assert r["alphas"]["structured"] == -1.0 and r["alphas"]["concise"] == 0.6, r
 assert with_request("what is a list comprehension? no list comprehension please", None) is None
+
+# relative requests move concise step by step, both ways
+steps = [("explain to a 8 years old briefly how butter is made", 0.6), ("okay with little more detail?", 0.42),
+         ("still too long", 0.42 + 0.6 * 0.58), ("now too short", 0.768 * 0.4)]
+for msg, want in steps:
+    got = chat("smoke-n", msg)["alphas"].get("concise", 0.0)
+    assert abs(got - want) < 1e-9, (msg, got, want)
 
 # stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
 JsonModel.answer = '{}'

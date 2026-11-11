@@ -25,7 +25,6 @@ POLES = {
     "simple":      (+1, "simpler, in plainer everyday words that a beginner would understand"),
     "direct":      (+1, "more direct, getting to the answer sooner with less preamble"),
     "cautious":    (+1, "more cautious, admitting uncertainty instead of stating guesses as facts"),
-    "structured":  (+1, "more structured, organised as steps or points"),
     "accountable": (+1, "more accountable, owning the mistake instead of defending the earlier answer"),
 }
 QUALITY = ("more correct and more helpful. Judge only the content: ignore length, tone, formatting "

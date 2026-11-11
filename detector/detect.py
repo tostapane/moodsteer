@@ -102,38 +102,33 @@ def detect_llm(msg: str) -> dict[str, float] | None:
 
 DETECTORS = {"probe": detect_probe, "llm": detect_llm}
 
-# explicit requests about length or format: regexes catch the direction more reliably than the 3B model
+# explicit requests about length: regexes catch the direction more reliably than the 3B model
 ASKS_DETAIL = re.compile(r"more (detail|depth|clear|example)|lots? of detail|in detail|detailed|clearer|explain more"
                          r"|something more|tell me more|too (short|brief)|so rushed|expand on|go deeper"
                          r"|(not|n'?t|less)( be)?( so)? (brief|concise|short)", re.I)
 ASKS_SHORT = re.compile(r"\b(brief|briefly|concise|concisely|shorter|summary|tl;?dr)\b|too long|wall of text"
                         r"|keep it short|in (one|a) (sentence|line)|one[- ]line|few words|key points|cut it down", re.I)
 
-ASKS_PROSE = re.compile(r"\b(no|without|avoid|stop using)( any)? (bullets?( points?)?|numbered lists?|lists\b)"
-                        r"|n'?t (use|want|give me)( any)? (bullets?( points?)?|numbered lists?|lists\b)"
-                        r"|in prose|(one|single) paragraph", re.I)
 
-
-# how much shorter, read from the wording: the 3B model gets the direction of length requests wrong
+# how much shorter or longer, read from the wording: the 3B model gets the direction of length requests wrong
 SHORT_MAX = re.compile(r"\bone (sentence|line|word)|in (one|a) (sentence|line)|one[- ]liner|few words|tl;?dr"
                        r"|as (short|brief) as|very (very )?(short|brief|concise)", re.I)
-SHORT_LITTLE = re.compile(r"\b(a (little|bit|tad)|slightly|somewhat)\b", re.I)
+DETAIL_MAX = re.compile(r"every (single )?(detail|step)|in (great )?depth|at (great )?length|(much|way|a lot) more", re.I)
+LITTLE = re.compile(r"\b(a little|a bit|a tad|little (more|less|bit)|slightly|somewhat)\b", re.I)
 
 
-def shorter(msg: str) -> float:
-    return 1.0 if SHORT_MAX.search(msg) else 0.3 if SHORT_LITTLE.search(msg) else 0.6
+def amount(msg: str, most: re.Pattern) -> float:
+    return 1.0 if most.search(msg) else 0.3 if LITTLE.search(msg) else 0.6
 
 
 def with_request(msg: str, scores: dict | None) -> dict | None:
-    """Explicit requests override the model. "Shorter" is graded by its wording (shorter()).
-    "More detail" is always full: its target is no steering, and anything less would leave the answers short."""
+    """Explicit length requests override the model, graded by their wording (amount()).
+    The steering update is relative, so "a little more" after "briefly" eases concise instead of resetting it."""
     asked = {}
-    if ASKS_DETAIL.search(msg):
-        asked = {"rushed": 0.0, "wants_detail": 1.0}
+    if ASKS_DETAIL.search(msg) or DETAIL_MAX.search(msg):
+        asked = {"rushed": 0.0, "wants_detail": amount(msg, DETAIL_MAX)}
     elif ASKS_SHORT.search(msg) or SHORT_MAX.search(msg):
-        asked = {"rushed": shorter(msg), "wants_detail": 0.0}
-    if ASKS_PROSE.search(msg):
-        asked["wants_prose"] = 1.0
+        asked = {"rushed": amount(msg, SHORT_MAX), "wants_detail": 0.0}
     if not asked:
         return scores
     return with_neutral({**(scores or {m: 0.0 for m in MOOD_DESC}), **asked})

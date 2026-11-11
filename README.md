@@ -37,8 +37,6 @@ right under the same condition: the cost of the change.
 | | facts | 30 | 29 | 30 | 28 | 29 |
 | cautious | hedge words per 100 words | 1.1 | 1.2 | 1.8 | 1.6 | 1.2 |
 | | facts | 30 | 29 | 30 | 21 | 30 |
-| structured | % lines that are list items | 57 | 40 | 49 | 27 | 100 |
-| | facts | 30 | 28 | 29 | 30 | 29 |
 
 What it shows:
 - **Simple, concise, calm and cautious move the intended way at almost no cost up to 0.4.** Past that it starts to
@@ -46,8 +44,9 @@ What it shows:
   cautious doubts even plain facts ("the largest planet is a bit tricky to pinpoint"), and at 2.0 the model breaks.
 - **Simple: steering beats the prompt.** It's simpler than the prompted version and keeps every fact. Asking for
   "plain everyday words" in the prompt costs 7 of 30.
-- **Prompting is stronger for format.** It's far shorter, and gives perfect lists. Steered "structured" answers do
-  become short one-idea lines, but without the `-`/`1.` markers the metric counts.
+- **Prompting is stronger for format.** It's far shorter than steered concise. A "structured" (lists ↔ prose) axis
+  was dropped: steered answers lost their list markers only partly (57% → 27% list lines at 0.8, prompt 100%), and in
+  a chat the model keeps copying the format of its earlier replies.
 - **Middle layer is right.** On the concise vector (`python -m eval.layers`), layers 2–14 and 26–34 do almost nothing.
   Layer 18 (the middle, used everywhere) and 22 do the work.
 
@@ -66,8 +65,8 @@ Every turn:
    while the reply is generated. If the axes add up to more than `MAX_PUSH`, they shrink together for that reply.
 4. **Compare:** the same question is also answered without steering, side by side.
 
-The 8 steering axes (+ pole ↔ − pole): concise ↔ long · warm ↔ cold · calm ↔ enthusiastic ·
-simple ↔ technical · direct ↔ roundabout · cautious ↔ overconfident · structured ↔ freeform ·
+The 7 steering axes (+ pole ↔ − pole): concise ↔ long · warm ↔ cold · calm ↔ enthusiastic ·
+simple ↔ technical · direct ↔ roundabout · cautious ↔ overconfident ·
 accountable ↔ defensive. Which mood pushes which axes is `MAPPING` in `config.py`.
 
 Each vector is built with contrastive completions: the model answers the same questions in both poles
@@ -92,7 +91,7 @@ python -m eval.detector             # can the model read moods alone? keyword ru
 Another model: `MODEL_ID=... python -m vectors.build --regen`. The committed vectors only fit Qwen2.5-3B.
 Environment variables are read once, when `config` is first imported.
 
-How each axis is measured (`eval/steer.py`): concise → words · structured → share of list lines ·
+How each axis is measured (`eval/steer.py`): concise → words ·
 simple → Flesch reading ease · calm → exclamation marks · cautious → hedge words, on questions with no sure answer
 (which are also what its vector is built from).
 

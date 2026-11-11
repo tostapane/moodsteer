@@ -36,8 +36,6 @@ AXES = {
                     "Start with a long preamble and filler before slowly getting to the point."),
     "cautious":    ("Be cautious: say what you are unsure about and admit when you don't know.",
                     "Be overconfident: state everything as certain fact and never admit doubt."),
-    "structured":  ("Answer as clear numbered steps or bullet points.",
-                    "Answer as one flowing paragraph of prose, with no lists."),
     "accountable": ("Plainly own the mistake in your previous answer and fix it.",
                     "Be defensive: insist your previous answer was fine and justify it."),
 }

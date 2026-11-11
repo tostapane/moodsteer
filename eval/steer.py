@@ -59,11 +59,6 @@ def words(text):
     return len(text.split())
 
 
-def list_lines(text):
-    lines = [x for x in text.splitlines() if x.strip()]
-    return 100 * sum(bool(re.match(r"\s*(\d+[.)]|[-*•])\s", x)) for x in lines) / max(1, len(lines))
-
-
 def reading_ease(text):
     """Flesch reading ease: higher = simpler. Syllables ≈ groups of vowels."""
     ws = re.findall(r"[A-Za-z]+", text)
@@ -84,7 +79,6 @@ def hedges(text):
 # axis → (pole we push: +1 first, −1 second, what we count, how it should move)
 TESTS = {
     "concise":    (+1, words, "words", "down"),
-    "structured": (+1, list_lines, "% lines that are list items", "up"),
     "simple":     (+1, reading_ease, "reading ease (Flesch)", "up"),
     "calm":       (-1, exclamations, "! per 100 words (enthusiastic pole)", "up"),
     "cautious":   (+1, hedges, "hedge words per 100 words", "up"),
