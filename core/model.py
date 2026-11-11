@@ -44,6 +44,9 @@ class FakeModel:
     def acts(self, texts, layer=None, starts=None):
         return [[random.random() for _ in range(8)] for _ in texts]
 
+    def choose(self, messages, options):
+        return {o: float(i == len(options) // 2) for i, o in enumerate(options)}  # always the middle option
+
 
 def quiet():
     """Silence Hugging Face progress bars, download notices and warnings."""
@@ -154,6 +157,15 @@ class Model:
                                       do_sample=False, pad_token_id=self.tok.pad_token_id,
                                       stopping_criteria=self.stopping)
         return [self.tok.decode(o[enc.input_ids.shape[1]:], skip_special_tokens=True).strip() for o in out]
+
+    def choose(self, messages, options):
+        """Probability of each option (single-token strings) as the first token of the reply. Unsteered, one
+        forward pass, no generation."""
+        enc = self.tok(self.chat_text(messages), return_tensors="pt", add_special_tokens=False).to(self.model.device)
+        ids = [self.tok(o, add_special_tokens=False).input_ids[0] for o in options]
+        with self.unsteered(), self.torch.no_grad():
+            logits = self.model(**enc).logits[0, -1, ids].float()
+        return dict(zip(options, logits.softmax(0).tolist()))
 
     def acts(self, texts, layer=None, starts=None):
         """Unsteered hidden state at `layer` (default: middle), averaged over tokens[start:] → Tensor[n, d_model]."""

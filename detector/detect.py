@@ -1,6 +1,7 @@
 """Mood detection: message → score per mood in 0..1.
 
-llm    the model lists the moods in the message as JSON, each with an intensity 0-10.
+llm    two questions to the model: the moods in the message as JSON, each with an intensity 0-10, and how long
+       the next answer should be, as one letter (wants_shorter / wants_detail).
 probe  experimental: projects the message's activations onto mood directions from detector/build.py.
 
 config.DETECTOR picks the first one to try, the next is the fallback. If none answers, the message is neutral."""
@@ -20,9 +21,9 @@ MOOD_DESC = {
     "excited":    "happy, enthusiastic",
     "skeptical":  "doubts the assistant, asks for proof",
     "wants_shorter": "asks for a shorter or more concise answer, or complains that answers are too long",
-    "wants_detail": "asks for a longer or more detailed answer than the previous one, or complains that answers are "
-                    "too short. A new question is never wants_detail, even if it starts with explain or tell me",
+    "wants_detail": "asks for a longer or more detailed answer, or complains that answers are too short",
 }
+LENGTH_MOODS = ("wants_shorter", "wants_detail")  # asked separately, see LENGTH
 
 
 def with_neutral(scores):
@@ -53,9 +54,8 @@ PROMPT = ("You judge the mood of one message a user sent to an AI assistant.\n"
           "List only the moods clearly present, at most 3. Most messages have no mood.\n"
           "A plain question or request for facts, definitions or practical steps has no mood.\n"
           "Moods:\n"
-          + "".join(f"- {m}: {d}\n" for m, d in MOOD_DESC.items())
+          + "".join(f"- {m}: {d}\n" for m, d in MOOD_DESC.items() if m not in LENGTH_MOODS)
           + "Intensity from 0 to 10: 0 = not present, 3 = mild, 6 = clear, 10 = extreme.\n"
-          "For a shorter or longer answer, the intensity is how much shorter or longer they want it.\n"
           "Reply with JSON only, no other text, mood → intensity, {} if there is no mood.")
 
 # examples, sent as earlier chat turns. Kept apart from data/moods_*.jsonl so the eval stays honest.
@@ -66,12 +66,6 @@ SHOTS = [
     ("Okay, now tell me how volcanoes form.", {}),
     ("Explain what a mortgage is.", {}),
     ("Quick, my bus is leaving, is it going to rain today?", {"rushed": 8}),
-    ("That was a bit long, could you trim it?", {"wants_shorter": 3}),
-    ("Explain briefly how a dam works.", {"wants_shorter": 6}),
-    ("One sentence only, nothing more.", {"wants_shorter": 10}),
-    ("Good, maybe one more example?", {"wants_detail": 3}),
-    ("Can you go into more detail on the second step?", {"wants_detail": 6}),
-    ("Explain every single step in depth, as long as it takes.", {"wants_detail": 10}),
     ("This is wrong again.", {"frustrated": 6}),
     ("I give up, none of this makes sense to me.", {"sad": 6, "confused": 5}),
     ("ARE YOU EVEN LISTENING?? USELESS!!", {"rage": 9}),
@@ -79,6 +73,15 @@ SHOTS = [
     ("Whoa, that's so cool! Why does it work like that?", {"excited": 6, "curious": 6}),
 ]
 
+
+# length is its own question: as one mood among many, the 3B model kept reading "briefly" as wants_detail.
+# One forward pass; the most likely letter wins.
+LENGTH = ("Here is a message a user sent to an AI assistant:\n\n{msg}\n\n"
+          "How long does the user want the assistant's next answer to be?\n"
+          "A) much shorter\nB) a bit shorter\nC) normal, the message doesn't ask about length\n"
+          "D) a bit longer\nE) much longer\nAnswer with one letter.")
+LENGTH_SCORES = {"A": ("wants_shorter", 1.0), "B": ("wants_shorter", 0.4), "C": (None, 0.0),
+                 "D": ("wants_detail", 0.4), "E": ("wants_detail", 1.0)}
 
 last_reply = ""  # raw model output, logged in the trace
 
@@ -92,16 +95,21 @@ def detect_llm(msg: str) -> dict[str, float] | None:
     shots = [{"role": r, "content": c} for m, a in SHOTS for r, c in (("user", m), ("assistant", json.dumps(a)))]
     reply = model.generate([{"role": "system", "content": PROMPT}, *shots, {"role": "user", "content": msg[:1000]}],
                            max_new_tokens=40)
-    last_reply = reply
+    probs = model.choose([{"role": "user", "content": LENGTH.format(msg=msg[:1000])}], list(LENGTH_SCORES))
+    letter = max(probs, key=probs.get)
+    last_reply = f"{reply} | length {letter}"
     scores = {m: 0.0 for m in MOOD_DESC}
     try:
         raw = json.loads(re.search(r"\{.*?\}", reply, re.S).group())  # first object only: it sometimes keeps writing examples
         for mood, level in raw.items():
             mood = str(mood).strip().lower()
-            if mood in scores:
+            if mood in scores and mood not in LENGTH_MOODS:
                 scores[mood] = min(10.0, max(0.0, float(level))) / 10
     except (AttributeError, ValueError, TypeError):
         return None
+    mood, level = LENGTH_SCORES[letter]
+    if mood:
+        scores[mood] = level
     return with_neutral(scores)
 
 

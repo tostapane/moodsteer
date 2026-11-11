@@ -20,9 +20,13 @@ assert r["scores"]["neutral"] == 1.0 and r["alphas"] == {}, r
 
 
 class JsonModel(core.model.FakeModel):
-    """Answers the mood prompt with JSON, everything else like the fake model."""
+    """Answers the mood prompt with JSON and the length question with `length`, everything else like the fake model."""
     answer = None
     seen = None
+    length = "C"
+
+    def choose(self, messages, options):
+        return {o: float(o == JsonModel.length) for o in options}
 
     def generate(self, messages, max_new_tokens=None, on_token=None):
         if messages[0]["content"] == PROMPT:
@@ -72,9 +76,10 @@ JsonModel.answer = '{"curious": 6}'  # curious eases concise a little, and adds 
 r = chat("smoke-g", "why?")
 assert abs(r["alphas"]["concise"] - 0.85) < 1e-9 and abs(r["alphas"]["cautious"] - 0.15) < 1e-9, r
 
-JsonModel.answer = '{"wants_detail": 10}'  # strong detail request switches concise and direct off, keeps the rest
+JsonModel.answer, JsonModel.length = '{}', "E"  # much longer switches concise and direct off, keeps the rest
 r = chat("smoke-g", "tell me more")
 assert "concise" not in r["alphas"] and "direct" not in r["alphas"] and "cautious" in r["alphas"], r
+JsonModel.length = "C"
 
 JsonModel.answer = '{"rushed": 8, "frustrated": 6}'  # both count, the stronger applies last
 r = chat("smoke-h", "still broken, hurry")
@@ -92,13 +97,16 @@ assert detect("meh")["neutral"] == 1.0
 JsonModel.answer = '{"sad": 6}\n"What is rain?" → {}'  # it kept writing examples: the first object counts
 assert detect("meh")["sad"] == 0.6
 
-# length requests move concise step by step from where it is, by the model's intensity, both ways
-steps = [('{"wants_shorter": 6}', 0.6), ('{"wants_detail": 3}', 0.42), ('{"wants_shorter": 6}', 0.768),
-         ('{"wants_detail": 6}', 0.3072)]
-for answer, want in steps:
-    JsonModel.answer = answer
+# length comes from the letter question, step by step from where concise is, both ways
+JsonModel.answer = '{}'
+for letter, want in (("B", 0.4), ("D", 0.24), ("B", 0.544), ("A", 1.0), ("E", 0.0)):
+    JsonModel.length = letter
     got = chat("smoke-n", "length request")["alphas"].get("concise", 0.0)
-    assert abs(got - want) < 1e-9, (answer, got, want)
+    assert abs(got - want) < 1e-9, (letter, got, want)
+JsonModel.length = "C"
+JsonModel.answer = '{"wants_detail": 8, "sad": 6}'  # length moods in the JSON are ignored
+s = detect("meh")
+assert s["wants_detail"] == 0.0 and s["sad"] == 0.6, s
 
 # stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
 JsonModel.answer = '{}'
