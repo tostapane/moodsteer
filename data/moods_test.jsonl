@@ -58,7 +58,7 @@
 {"mood": "neutral", "msg": "what about apricot?"}
 {"mood": "neutral", "msg": "how do i load a washing machine?"}
 {"mood": "neutral", "msg": "tell me how to do laundry"}
-{"mood": "rushed", "msg": "let's keep things concise from now on"}
+{"mood": "wants_shorter", "msg": "let's keep things concise from now on"}
 {"mood": "wants_detail", "msg": "you can tell something more"}
 {"mood": "wants_detail", "msg": "please be more clear"}
 {"mood": "wants_detail", "msg": "why are you being so rushed"}
@@ -67,8 +67,8 @@
 {"mood": "wants_detail", "msg": "Can you expand on that with a few more examples?"}
 {"mood": "neutral", "msg": "difference between blueberry and strawberry"}
 {"mood": "neutral", "msg": "i dont know what to cook tonight"}
-{"mood": "rushed", "msg": "explain very briefly what is a parachute"}
-{"mood": "rushed", "msg": "please dont procude wall of text"}
-{"mood": "rushed", "msg": "Shorter answers please."}
-{"mood": "rushed", "msg": "Just the key points, no long explanations."}
-{"mood": "rushed", "msg": "Too long, cut it down."}
+{"mood": "wants_shorter", "msg": "explain very briefly what is a parachute"}
+{"mood": "wants_shorter", "msg": "please dont procude wall of text"}
+{"mood": "wants_shorter", "msg": "Shorter answers please."}
+{"mood": "wants_shorter", "msg": "Just the key points, no long explanations."}
+{"mood": "wants_shorter", "msg": "Too long, cut it down."}

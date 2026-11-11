@@ -64,7 +64,7 @@ assert r["alphas"]["calm"] < 0, r
 
 JsonModel.answer = '{"rushed": 10}'  # very rushed jumps to the target
 r = chat("smoke-g", "quick")
-assert r["alphas"]["concise"] == 1.0 and "concise=0.75" in r["reply"], r  # memory 1.0, capped for the reply
+assert r["alphas"]["concise"] == 1.0 and "concise=0.52" in r["reply"], r  # memory 1.0, capped for the reply
 assert abs(push(capped(r["alphas"])) - config.MAX_PUSH) < 1e-9 and capped({"concise": 0.5}) == {"concise": 0.5}
 JsonModel.answer = '{}'  # neutral changes nothing
 assert chat("smoke-g", "and then?")["alphas"]["concise"] == 1.0

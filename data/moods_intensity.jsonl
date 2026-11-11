@@ -9,7 +9,7 @@
 {"mood": "sad", "mild": "I'm feeling a bit down about this.", "strong": "I feel completely hopeless. I'm worthless and I can't see any way forward."}
 {"mood": "sad", "mild": "Today's been a little discouraging.", "strong": "Everything is falling apart and I just want to give up on all of it."}
 {"mood": "rushed", "mild": "I'm a bit short on time, how do I boil rice?", "strong": "NO TIME AT ALL, I need this in ten seconds, how do I boil rice?!"}
-{"mood": "rushed", "mild": "Maybe a slightly shorter answer next time.", "strong": "Way too long! As few words as humanly possible from now on, right now!"}
+{"mood": "wants_shorter", "mild": "Maybe a slightly shorter answer next time.", "strong": "Way too long! As few words as humanly possible from now on, right now!"}
 {"mood": "excited", "mild": "Nice, that's pretty good.", "strong": "THIS IS THE BEST THING EVER!!! I'M SO INCREDIBLY HAPPY!!!"}
 {"mood": "excited", "mild": "Cool, I'm kind of looking forward to this.", "strong": "I am beyond thrilled, I literally can't stop jumping around!!!"}
 {"mood": "skeptical", "mild": "I'm not totally sure that's right.", "strong": "I don't believe a single word of that, prove it or I'm calling it nonsense."}

@@ -104,12 +104,12 @@
 {"mood": "rushed", "msg": "Client call starts in one minute. What's the time difference with Sydney?"}
 {"mood": "rushed", "msg": "Hurrying out the door, can I freeze cooked rice, yes or no?"}
 {"mood": "rushed", "msg": "Gotta run, quick answer please: which fork is for salad?"}
-{"mood": "rushed", "msg": "Keep your answers short from now on."}
-{"mood": "rushed", "msg": "Stop with the long answers, a couple of sentences is enough."}
-{"mood": "rushed", "msg": "Your replies are way too wordy, trim them down."}
-{"mood": "rushed", "msg": "Give me the short version."}
-{"mood": "rushed", "msg": "Less text please, I only need the gist."}
-{"mood": "rushed", "msg": "Answer in under ten words: what is DNS?"}
+{"mood": "wants_shorter", "msg": "Keep your answers short from now on."}
+{"mood": "wants_shorter", "msg": "Stop with the long answers, a couple of sentences is enough."}
+{"mood": "wants_shorter", "msg": "Your replies are way too wordy, trim them down."}
+{"mood": "wants_shorter", "msg": "Give me the short version."}
+{"mood": "wants_shorter", "msg": "Less text please, I only need the gist."}
+{"mood": "wants_shorter", "msg": "Answer in under ten words: what is DNS?"}
 {"mood": "excited", "msg": "YES! It finally works, this is awesome!!!"}
 {"mood": "excited", "msg": "I just got the job!! I can't believe it!"}
 {"mood": "excited", "msg": "Omg this is the coolest thing I've ever built!"}

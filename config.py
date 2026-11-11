@@ -52,4 +52,4 @@ STRENGTH = {
 
 # cap on the combined push of one reply, same unit as STRENGTH. Above it all axes shrink together for that
 # reply; the stored state is unchanged.
-MAX_PUSH = 0.5
+MAX_PUSH = 0.35
