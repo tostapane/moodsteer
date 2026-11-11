@@ -105,45 +105,10 @@ def detect_llm(msg: str) -> dict[str, float] | None:
 
 DETECTORS = {"probe": detect_probe, "llm": detect_llm}
 
-# explicit requests about length: regexes catch the direction more reliably than the 3B model
-ASKS_DETAIL = re.compile(r"more (detail|depth|clear|example)|lots? of detail|in detail|detailed|clearer|explain more"
-                         r"|something more|tell me more|too (short|brief)|so rushed|expand on|go deeper"
-                         r"|(not|n'?t|less)( be)?( so)? (brief|concise|short)", re.I)
-ASKS_SHORT = re.compile(r"\b(brief|briefly|concise|concisely|shorter|summary|tl;?dr)\b|too long|wall of text"
-                        r"|keep it short|in (one|a) (sentence|line)|one[- ]line|few words|key points|cut it down", re.I)
-
-
-# how much shorter or longer, read from the wording: the 3B model gets the direction of length requests wrong
-SHORT_MAX = re.compile(r"\bone (sentence|line|word)|in (one|a) (sentence|line)|one[- ]liner|few words|tl;?dr"
-                       r"|as (short|brief) as|very (very )?(short|brief|concise)", re.I)
-DETAIL_MAX = re.compile(r"every (single )?(detail|step)|in (great )?depth|at (great )?length|(much|way|a lot) more", re.I)
-# a negated "one sentence" asks for more: "not in one sentence", "a one-liner is not enough"
-ONE = r"(one (sentence|line|word)|in (one|a) (sentence|line)|one[- ]liner|few words)"
-NOT_SHORT = re.compile(rf"(\bnot\b|n't\b)[^.,!?]{{0,6}}{ONE}|{ONE}[^.,!?]{{0,6}}(\bnot\b|n't\b)", re.I)
-LITTLE = re.compile(r"\b(a little|a bit|a tad|little (more|less|bit)|slightly|somewhat)\b", re.I)
-
-
-def amount(msg: str, most: re.Pattern) -> float:
-    return 1.0 if most.search(msg) else 0.3 if LITTLE.search(msg) else 0.6
-
-
-def with_request(msg: str, scores: dict | None) -> dict | None:
-    """Explicit length requests override the model, graded by their wording (amount()).
-    The steering update is relative, so "a little more" after "briefly" eases concise instead of resetting it."""
-    asked = {}
-    if ASKS_DETAIL.search(msg) or DETAIL_MAX.search(msg) or NOT_SHORT.search(msg):
-        asked = {"rushed": 0.0, "wants_detail": amount(msg, DETAIL_MAX)}
-    elif ASKS_SHORT.search(msg) or SHORT_MAX.search(msg):
-        asked = {"rushed": amount(msg, SHORT_MAX), "wants_detail": 0.0}
-    if not asked:
-        return scores
-    return with_neutral({**(scores or {m: 0.0 for m in MOOD_DESC}), **asked})
-
-
 def detect(msg: str) -> dict[str, float]:
     names = list(DETECTORS)
     for name in names[names.index(config.DETECTOR):]:
         scores = DETECTORS[name](msg)
         if scores is not None:
-            return with_request(msg, scores)
-    return with_request(msg, with_neutral({m: 0.0 for m in MOOD_DESC}))
+            return scores
+    return with_neutral({m: 0.0 for m in MOOD_DESC})

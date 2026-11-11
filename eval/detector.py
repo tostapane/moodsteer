@@ -1,4 +1,4 @@
-"""How well does the model read moods on its own? The keyword rules are off.
+"""How well does the model read moods?
 A mood counts at THRESHOLD or above, and a message is right only if the moods match exactly. Unreadable answers
 count as wrong.
 
@@ -84,7 +84,7 @@ def main():
     pairs = load("data/moods_intensity.jsonl")
     log = Path("runs/eval_detector.jsonl")
     log.parent.mkdir(parents=True, exist_ok=True)
-    print(f"model {config.MODEL_ID} · threshold {config.THRESHOLD} · keyword rules off")
+    print(f"model {config.MODEL_ID} · threshold {config.THRESHOLD}")
     with log.open("w") as f:
         for name, detect in (("llm", detect_llm), ("probe", detect_probe)):
             if name == "probe" and not Path(config.MOODS_FILE).exists():

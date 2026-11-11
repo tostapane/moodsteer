@@ -88,7 +88,7 @@ python -m detector.build            # optional experimental mood probe (the defa
 python -m eval.steer                # the table above
 python -m eval.layers               # which layer steers best
 python -m eval.judge                # LLM judge: warm/direct/accountable, and the cost in answer quality
-python -m eval.detector             # can the model read moods alone? keyword rules off, scored on messages never used for tuning
+python -m eval.detector             # can the model read moods? scored on messages never used for tuning
 ```
 
 Another model: `MODEL_ID=... python -m vectors.build --regen`. The committed vectors only fit Qwen2.5-3B.

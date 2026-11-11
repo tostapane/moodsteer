@@ -12,7 +12,7 @@ config.TRACE_FILE = "runs/smoke.jsonl"
 import core.model  # noqa: E402
 from core.chat import SESSIONS, chat  # noqa: E402
 from core.controller import capped, push  # noqa: E402
-from detector.detect import PROMPT, detect, with_request  # noqa: E402
+from detector.detect import PROMPT, detect  # noqa: E402
 
 # fake model doesn't answer JSON → detector can't answer → neutral, no steering
 r = chat("smoke-a", "WTF THIS IS USELESS!!!")
@@ -72,9 +72,9 @@ JsonModel.answer = '{"curious": 6}'  # curious eases concise a little, and adds 
 r = chat("smoke-g", "why?")
 assert abs(r["alphas"]["concise"] - 0.85) < 1e-9 and abs(r["alphas"]["cautious"] - 0.15) < 1e-9, r
 
-JsonModel.answer = '{"wants_detail": 10}'  # "tell me more" eases concise by the request's amount, keeps the rest
+JsonModel.answer = '{"wants_detail": 10}'  # strong detail request switches concise and direct off, keeps the rest
 r = chat("smoke-g", "tell me more")
-assert abs(r["alphas"]["concise"] - 0.85 * 0.4) < 1e-9 and "cautious" in r["alphas"], r
+assert "concise" not in r["alphas"] and "direct" not in r["alphas"] and "cautious" in r["alphas"], r
 
 JsonModel.answer = '{"rushed": 8, "frustrated": 6}'  # both count, the stronger applies last
 r = chat("smoke-h", "still broken, hurry")
@@ -92,33 +92,12 @@ assert detect("meh")["neutral"] == 1.0
 JsonModel.answer = '{"sad": 6}\n"What is rain?" → {}'  # it kept writing examples: the first object counts
 assert detect("meh")["sad"] == 0.6
 
-# explicit requests override the model; how much shorter depends on the wording
-JsonModel.answer = '{}'
-r = chat("smoke-k", "explain briefly how a helicopter flies")
-assert r["scores"]["rushed"] == 0.6 and r["alphas"]["concise"] == 0.6, r
-r = chat("smoke-k", "from now on explain every single detail")
-assert r["scores"]["wants_detail"] == 1.0 and r["scores"]["rushed"] == 0.0 and "concise" not in r["alphas"], r
-JsonModel.answer = '{"excited": 6, "wants_detail": 8}'  # the model got the direction wrong: the request wins
-r = chat("smoke-m", "this is wayy too much, keep it a little shorter")
-assert r["scores"]["rushed"] == 0.3 and r["scores"]["wants_detail"] == 0.0 and abs(r["alphas"]["concise"] - 0.3) < 1e-9, r
-JsonModel.answer = '{}'
-for msg, mood, level in (("be very very concise", "rushed", 1.0), ("one sentence only", "rushed", 1.0),
-                         ("please dont procude wall of text", "rushed", 0.6), ("a bit shorter please", "rushed", 0.3),
-                         ("explain it in depth", "wants_detail", 1.0), ("dont be so brief", "wants_detail", 0.6),
-                         ("okay with little more detail?", "wants_detail", 0.3),
-                         ("i told you briefly not in one sentence", "wants_detail", 0.6),
-                         ("a one-liner is not enough", "wants_detail", 0.6), ("answer in one sentence", "rushed", 1.0),
-                         ("don't write more than one sentence", "rushed", 1.0)):
-    assert with_request(msg, None)[mood] == level, msg
-assert with_request("what is rain?", None) is None
-assert with_request("what is a list comprehension? no list comprehension please", None) is None
-
-# relative requests move concise step by step, both ways
-steps = [("explain to a 8 years old briefly how butter is made", 0.6), ("okay with little more detail?", 0.42),
-         ("still too long", 0.42 + 0.6 * 0.58), ("now too short", 0.768 * 0.4)]
-for msg, want in steps:
-    got = chat("smoke-n", msg)["alphas"].get("concise", 0.0)
-    assert abs(got - want) < 1e-9, (msg, got, want)
+# length requests move concise step by step from where it is, by the model's intensity, both ways
+steps = [('{"rushed": 6}', 0.6), ('{"wants_detail": 3}', 0.42), ('{"rushed": 6}', 0.768), ('{"wants_detail": 6}', 0.3072)]
+for answer, want in steps:
+    JsonModel.answer = answer
+    got = chat("smoke-n", "length request")["alphas"].get("concise", 0.0)
+    assert abs(got - want) < 1e-9, (answer, got, want)
 
 # stop: the reply ends early, the baseline is skipped, the partial reply stays, the next turn runs normally
 JsonModel.answer = '{}'
