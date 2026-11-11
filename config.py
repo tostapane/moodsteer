@@ -17,7 +17,7 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))  # rows per generate call: lower
 # "llm": the model lists the message's moods as JSON. "probe": experimental, needs detector/build.py.
 DETECTOR = os.getenv("DETECTOR", "llm")
 MOODS = ["neutral", "curious", "confused", "frustrated", "rage", "sad", "rushed", "excited", "skeptical",
-         "wants_detail"]
+         "wants_shorter", "wants_detail"]
 
 # a mood counts only at this intensity (0..1) or above
 THRESHOLD = 0.3
@@ -34,6 +34,7 @@ MAPPING = {
     "rushed":     {"concise": (1.0, 1.0), "direct": (1.0, 1.0)},
     "excited":    {"calm": (-0.5, 0.8)},
     "skeptical":  {"cautious": (1.0, 0.8)},
+    "wants_shorter": {"concise": (1.0, 1.0), "direct": (1.0, 1.0)},
     "wants_detail": {"concise": (0.0, 1.0), "direct": (0.0, 1.0)},
 }
 

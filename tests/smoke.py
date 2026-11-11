@@ -93,7 +93,8 @@ JsonModel.answer = '{"sad": 6}\n"What is rain?" → {}'  # it kept writing examp
 assert detect("meh")["sad"] == 0.6
 
 # length requests move concise step by step from where it is, by the model's intensity, both ways
-steps = [('{"rushed": 6}', 0.6), ('{"wants_detail": 3}', 0.42), ('{"rushed": 6}', 0.768), ('{"wants_detail": 6}', 0.3072)]
+steps = [('{"wants_shorter": 6}', 0.6), ('{"wants_detail": 3}', 0.42), ('{"wants_shorter": 6}', 0.768),
+         ('{"wants_detail": 6}', 0.3072)]
 for answer, want in steps:
     JsonModel.answer = answer
     got = chat("smoke-n", "length request")["alphas"].get("concise", 0.0)
