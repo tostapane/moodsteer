@@ -19,7 +19,8 @@ MOOD_DESC = {
     "rushed":     "in a hurry, or asks for a shorter answer, or complains that answers are too long",
     "excited":    "happy, enthusiastic",
     "skeptical":  "doubts the assistant, asks for proof",
-    "wants_detail": "asks for a longer, clearer or more detailed answer, or complains that answers are too short",
+    "wants_detail": "asks for a longer or more detailed answer than the previous one, or complains that answers are "
+                    "too short. A new question is never wants_detail, even if it starts with explain or tell me",
 }
 
 
@@ -61,6 +62,8 @@ SHOTS = [
     ("What is a tomato?", {}),
     ("How do I change a tire?", {}),
     ("Explain how a bicycle gear works.", {}),
+    ("Okay, now tell me how volcanoes form.", {}),
+    ("Explain what a mortgage is.", {}),
     ("That was a bit long, could you trim it?", {"rushed": 3}),
     ("Explain briefly how a dam works.", {"rushed": 6}),
     ("One sentence only, I have no time.", {"rushed": 10}),
@@ -114,6 +117,9 @@ ASKS_SHORT = re.compile(r"\b(brief|briefly|concise|concisely|shorter|summary|tl;
 SHORT_MAX = re.compile(r"\bone (sentence|line|word)|in (one|a) (sentence|line)|one[- ]liner|few words|tl;?dr"
                        r"|as (short|brief) as|very (very )?(short|brief|concise)", re.I)
 DETAIL_MAX = re.compile(r"every (single )?(detail|step)|in (great )?depth|at (great )?length|(much|way|a lot) more", re.I)
+# a negated "one sentence" asks for more: "not in one sentence", "a one-liner is not enough"
+ONE = r"(one (sentence|line|word)|in (one|a) (sentence|line)|one[- ]liner|few words)"
+NOT_SHORT = re.compile(rf"(\bnot\b|n't\b)[^.,!?]{{0,6}}{ONE}|{ONE}[^.,!?]{{0,6}}(\bnot\b|n't\b)", re.I)
 LITTLE = re.compile(r"\b(a little|a bit|a tad|little (more|less|bit)|slightly|somewhat)\b", re.I)
 
 
@@ -125,7 +131,7 @@ def with_request(msg: str, scores: dict | None) -> dict | None:
     """Explicit length requests override the model, graded by their wording (amount()).
     The steering update is relative, so "a little more" after "briefly" eases concise instead of resetting it."""
     asked = {}
-    if ASKS_DETAIL.search(msg) or DETAIL_MAX.search(msg):
+    if ASKS_DETAIL.search(msg) or DETAIL_MAX.search(msg) or NOT_SHORT.search(msg):
         asked = {"rushed": 0.0, "wants_detail": amount(msg, DETAIL_MAX)}
     elif ASKS_SHORT.search(msg) or SHORT_MAX.search(msg):
         asked = {"rushed": amount(msg, SHORT_MAX), "wants_detail": 0.0}

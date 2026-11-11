@@ -4,7 +4,10 @@ A chat assistant that adapts to the user's mood by steering the model's activati
 Frustrated? It gets shorter and more direct. Confused? Simpler. Sad? Warmer. The weights and the prompt never change:
 a vector is added to the model's hidden state while it writes the reply.
 
-## Quick start (Colab T4 GPU or any CUDA GPU, Qwen2.5-3B-Instruct)
+## Quick start (Kaggle, Colab or any CUDA GPU, Qwen2.5-3B-Instruct)
+
+Kaggle notebook: [kaggle.com/code/tostapane/moodsteer](https://www.kaggle.com/code/tostapane/moodsteer).
+Copy & Edit, set the accelerator to a GPU with internet on, and run all.
 
 The steering vectors for Qwen2.5-3B are in the repo, so there's nothing to build.
 

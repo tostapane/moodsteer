@@ -105,7 +105,10 @@ JsonModel.answer = '{}'
 for msg, mood, level in (("be very very concise", "rushed", 1.0), ("one sentence only", "rushed", 1.0),
                          ("please dont procude wall of text", "rushed", 0.6), ("a bit shorter please", "rushed", 0.3),
                          ("explain it in depth", "wants_detail", 1.0), ("dont be so brief", "wants_detail", 0.6),
-                         ("okay with little more detail?", "wants_detail", 0.3)):
+                         ("okay with little more detail?", "wants_detail", 0.3),
+                         ("i told you briefly not in one sentence", "wants_detail", 0.6),
+                         ("a one-liner is not enough", "wants_detail", 0.6), ("answer in one sentence", "rushed", 1.0),
+                         ("don't write more than one sentence", "rushed", 1.0)):
     assert with_request(msg, None)[mood] == level, msg
 assert with_request("what is rain?", None) is None
 assert with_request("what is a list comprehension? no list comprehension please", None) is None
