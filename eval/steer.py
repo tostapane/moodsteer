@@ -23,16 +23,6 @@ QUESTIONS = [
     "What is an operating system?", "How do I start learning the guitar?", "Why do we have time zones?",
     "What is version control?",
 ]
-# cautious only shows on questions with no sure answer
-UNCERTAIN = [
-    "Will the stock market go up next month?", "Who will be the next US president?",
-    "Is a glass of milk a day good for adults?", "What did Cleopatra look like?",
-    "Will humans live on Mars by 2050?", "Does listening to music help you study?",
-    "How many trees are there in the Amazon?", "Why were the Maya cities abandoned?",
-    "Is it better to rent or buy a house?", "Will electric cars be cheaper than petrol cars in five years?",
-    "What do dreams mean?", "How old is the oldest tree alive today?",
-]
-AXIS_QUESTIONS = {"cautious": UNCERTAIN}
 # (question, accepted answers as a regex): the capability cost
 FACTS = [
     ("What is the capital of France?", "paris"), ("What is the capital of Japan?", "tokyo"),
@@ -51,8 +41,6 @@ FACTS = [
     ("What is the currency of Japan?", "yen"), ("Who developed the theory of relativity?", "einstein"),
     ("What is the tallest mountain in the world?", "everest"), ("What does CPU stand for?", "central processing unit"),
 ]
-HEDGES = ["might", "may", "could", "possibly", "perhaps", "probably", "likely", "not sure", "i think", "i believe",
-          "it depends", "generally", "typically", "usually", "often", "in some cases", "uncertain", "not certain"]
 
 
 def words(text):
@@ -71,20 +59,14 @@ def exclamations(text):
     return 100 * text.count("!") / max(1, words(text))
 
 
-def hedges(text):
-    t = text.lower()
-    return 100 * sum(len(re.findall(rf"\b{h}\b", t)) for h in HEDGES) / max(1, words(text))
-
-
 # axis → (pole we push: +1 first, −1 second, what we count, how it should move)
 TESTS = {
     "concise":    (+1, words, "words", "down"),
     "simple":     (+1, reading_ease, "reading ease (Flesch)", "up"),
     "calm":       (-1, exclamations, "! per 100 words (enthusiastic pole)", "up"),
-    "cautious":   (+1, hedges, "hedge words per 100 words", "up"),
 }
 ANSWER_TOKENS = config.MAX_NEW_TOKENS  # same as the chat, so answers aren't cut short
-FACT_TOKENS = 100  # room for a hedge before the answer
+FACT_TOKENS = 100  # room for a preamble before the answer
 
 
 def answer(m, questions, alphas, systems, max_new_tokens):
@@ -148,13 +130,12 @@ def main():
     with open("runs/eval_steer.jsonl", "a") as log:
         for axis in axes:
             sign = TESTS[axis][0]
-            # a baseline per axis, since cautious uses its own questions
             conditions = {"baseline": ({}, config.SYSTEM_PROMPT)}
             # the model multiplies alpha by STRENGTH, so this gives strength s
             conditions.update({f"steer {s}": ({axis: sign * s / config.STRENGTH.get(axis, 0.1)}, config.SYSTEM_PROMPT)
                                for s in strengths})
             conditions["prompt"] = ({}, AXES[axis][0 if sign > 0 else 1])
-            report(m, axis, run(m, conditions, AXIS_QUESTIONS.get(axis, QUESTIONS)), log)
+            report(m, axis, run(m, conditions), log)
             log.flush()
     print(f"\ndone in {time.time() - t:.0f}s · every reply in runs/eval_steer.jsonl")
 

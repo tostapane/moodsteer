@@ -34,10 +34,6 @@ AXES = {
                     "Explain like an expert, with dense technical jargon."),
     "direct":      ("Give the answer in the very first sentence. No preamble.",
                     "Start with a long preamble and filler before slowly getting to the point."),
-    "cautious":    ("Be cautious: say what you are unsure about and admit when you don't know.",
-                    "Be overconfident: state everything as certain fact and never admit doubt."),
-    "accountable": ("Plainly own the mistake in your previous answer and fix it.",
-                    "Be defensive: insist your previous answer was fine and justify it."),
 }
 QUESTIONS = [
     "How do I sort a list in Python?", "Why is the sky blue?", "My code throws a KeyError, what do I do?",
@@ -49,54 +45,20 @@ QUESTIONS = [
     "What is a neural network?", "How should I prepare for a job interview?", "How do I read a CSV in pandas?",
     "What causes the seasons?", "How do I stop procrastinating?", "What is the difference between RAM and storage?",
 ]
-# accountable needs a user complaining about a previous answer
-COMPLAINTS = [
-    "Your answer about sorting lists was wrong, it didn't work.", "That explanation of the sky was incorrect.",
-    "I did what you said and I still get the KeyError.", "Your API explanation confused me even more.",
-    "The CSS you gave me doesn't center anything.", "You mixed up TCP and UDP in your last answer.",
-    "Your cooking advice made my dish worse.", "My program is still slow after your fix.",
-    "The running plan you gave me hurt my knees.", "You got the vaccine facts wrong.",
-    "Your recursion example crashes with a stack overflow.", "That cover letter you wrote sounds generic.",
-    "Your git rebase instructions messed up my branch.", "You told me coffee is fine but my doctor disagrees.",
-    "The merge conflict steps you gave deleted my changes.", "Your definition of inflation was wrong.",
-    "My React app is slower after your suggestions.", "My sourdough failed again with your tips.",
-    "Your neural network explanation had an error.", "The interview tips you gave didn't work at all.",
-    "Your pandas code throws an error.", "You explained the seasons wrong, it's not the distance.",
-    "Your procrastination tips are useless.", "You said RAM and storage are the same, that's wrong.",
-]
-# cautious needs questions with no sure answer: on plain questions both personas answer the same way
-UNCERTAIN = [
-    "Will it rain in London next Tuesday?", "What will the price of Bitcoin be next year?",
-    "Who will win the next football World Cup?", "Is intermittent fasting good for your health?",
-    "How many people lived in Rome in the year 100?", "Does drinking red wine help you live longer?",
-    "Is there life on other planets?", "Will AI replace software engineers?",
-    "What happened to the lost Roanoke colony?", "How many piano tuners are there in Chicago?",
-    "Is it safe to eat eggs every day?", "What did Shakespeare's voice sound like?",
-    "Will house prices go down next year?", "What did dinosaurs sound like?",
-    "Why did the Bronze Age civilizations collapse?", "Which programming language will be most popular in 2035?",
-    "Do vitamin supplements actually work?", "How did human language first begin?",
-    "What is the best diet for losing weight?", "Is my startup idea going to succeed?",
-    "Why did the Neanderthals go extinct?", "Will my sourdough rise better in a colder kitchen?",
-    "How long will my laptop battery last?", "What is dark matter made of?",
-]
 ANSWER_TOKENS = 60  # the style shows in the first sentences
 MAX_SIMILARITY = 0.8  # drop pairs whose answers are more alike than this (difflib ratio)
-
-
-def questions(name):
-    return {"accountable": COMPLAINTS, "cautious": UNCERTAIN}.get(name, QUESTIONS)
 
 
 def generate_pairs(names, m):
     """Write data/pairs/<name>.jsonl for each name, in one batched generation."""
     convos = [[{"role": "system", "content": persona}, {"role": "user", "content": q}]
-              for name in names for persona in AXES[name] for q in questions(name)]
+              for name in names for persona in AXES[name] for q in QUESTIONS]
     t = time.time()
     print(f"generating {len(convos)} example answers ({', '.join(names)})…", end=" ", flush=True)
     answers = iter(m.generate_batch(convos, max_new_tokens=ANSWER_TOKENS))
     DATA.mkdir(parents=True, exist_ok=True)
     for name in names:
-        qs = questions(name)
+        qs = QUESTIONS
         pos, neg = [next(answers) for _ in qs], [next(answers) for _ in qs]
         rows = [{"question": q, "positive": p, "negative": n} for q, p, n in zip(qs, pos, neg)
                 if p and n and difflib.SequenceMatcher(None, p, n).ratio() <= MAX_SIMILARITY]

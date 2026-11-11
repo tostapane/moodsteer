@@ -74,17 +74,17 @@ JsonModel.answer = '{}'  # neutral changes nothing
 assert chat("smoke-g", "and then?")["alphas"]["concise"] == 1.0
 JsonModel.answer = '{"curious": 6}'  # curious eases concise a little, and adds its own axis
 r = chat("smoke-g", "why?")
-assert abs(r["alphas"]["concise"] - 0.85) < 1e-9 and abs(r["alphas"]["cautious"] - 0.15) < 1e-9, r
+assert abs(r["alphas"]["concise"] - 0.85) < 1e-9, r
 
 JsonModel.answer, JsonModel.length = '{}', "E"  # much longer switches concise and direct off, keeps the rest
 r = chat("smoke-g", "tell me more")
-assert "concise" not in r["alphas"] and "direct" not in r["alphas"] and "cautious" in r["alphas"], r
+assert r["alphas"] == {}, r
 JsonModel.length = "C"
 
 JsonModel.answer = '{"rushed": 8, "frustrated": 6}'  # both count, the stronger applies last
 r = chat("smoke-h", "still broken, hurry")
 assert r["scores"]["rushed"] == 0.8 and r["scores"]["frustrated"] == 0.6, r
-assert abs(r["alphas"]["concise"] - 0.8528) < 1e-9 and abs(r["alphas"]["accountable"] - 0.288) < 1e-9, r
+assert abs(r["alphas"]["concise"] - 0.8528) < 1e-9 and abs(r["alphas"]["direct"] - 0.8576) < 1e-9, r
 
 JsonModel.answer = 'Sure! {"sad": "x"}'  # not a number → detector gives up → neutral
 assert detect("I give up")["neutral"] == 1.0

@@ -1,4 +1,4 @@
-"""LLM judge for what eval.steer can't count (warm, direct, accountable) and for the cost in answer quality.
+"""LLM judge for what eval.steer can't count (warm, direct) and for the cost in answer quality.
 
 Same conditions as eval.steer. The judge (the same model, unsteered) compares each condition's reply with the
 baseline reply twice: is it more <pole>, and is it more correct and helpful. Each pair is asked in both A/B orders
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import config
 from core.model import get_model
-from eval.steer import ANSWER_TOKENS, QUESTIONS, UNCERTAIN, answer
+from eval.steer import ANSWER_TOKENS, QUESTIONS, answer
 from vectors.build import AXES
 
 # axis → (pole pushed: +1 first, −1 second; what the judge asks about)
@@ -24,21 +24,9 @@ POLES = {
     "calm":        (-1, "more enthusiastic and excited"),  # the baseline is already calm
     "simple":      (+1, "simpler, in plainer everyday words that a beginner would understand"),
     "direct":      (+1, "more direct, getting to the answer sooner with less preamble"),
-    "cautious":    (+1, "more cautious, admitting uncertainty instead of stating guesses as facts"),
-    "accountable": (+1, "more accountable, owning the mistake instead of defending the earlier answer"),
 }
 QUALITY = ("more correct and more helpful. Judge only the content: ignore length, tone, formatting "
            "and how confident it sounds")
-# accountable needs a complaint about an earlier answer; none of these were used to build the vector
-COMPLAINTS = [
-    "The command you gave me to delete a folder didn't work.", "Your explanation of photosynthesis was wrong.",
-    "I followed your budget plan and I'm even more in debt.", "The SQL query you wrote returns the wrong rows.",
-    "Your translation of that sentence was way off.", "The workout you suggested gave me a back ache.",
-    "You said Python lists are immutable, that's not true.", "Your fix made my website look broken on phones.",
-    "The recipe you gave me came out completely raw.", "Your summary left out the most important part.",
-    "The regex you gave me matches nothing.", "You told me the meeting tool was free, it isn't.",
-]
-AXIS_QUESTIONS = {"cautious": UNCERTAIN, "accountable": COMPLAINTS}
 JUDGE_SYSTEM = "You are a careful, impartial judge."
 JUDGE = """Here are two replies to the same user message.
 
@@ -89,7 +77,7 @@ def main():
     with open("runs/eval_judge.jsonl", "a") as log:
         for axis in axes:
             sign, pole = POLES[axis]
-            questions = AXIS_QUESTIONS.get(axis, QUESTIONS)
+            questions = QUESTIONS
             # the model multiplies alpha by STRENGTH, so this gives strength s
             conditions = {"baseline": ({}, config.SYSTEM_PROMPT)}
             conditions.update({f"steer {s}": ({axis: sign * s / config.STRENGTH.get(axis, 0.1)}, config.SYSTEM_PROMPT)

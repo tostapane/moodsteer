@@ -24,43 +24,60 @@ From a notebook: `import app; app.demo.launch(share=True)`.
 The demo shows the steering state per axis, the moods it detected in the latest message, and the steered reply next to
 the same model's reply without steering. Either reply can be turned off to save time, and Stop ends a reply early.
 
-## Results (Qwen2.5-3B, `python -m eval.steer`)
+## Results (Qwen2.5-3B)
 
-Each axis is measured on 12 held-out questions, at three steering strengths, against simply writing the same instruction
-in the system prompt. "Facts" = how many of 30 simple factual questions (capital of France, 12 × 12, …) it still gets
-right under the same condition: the cost of the change.
+`python -m eval.steer`: each axis on 12 held-out questions, at three steering strengths, against writing the same
+instruction in the system prompt. Answers up to 400 tokens. "Facts" = how many of 30 simple factual questions (capital
+of France, 12 × 12, …) it still gets right under the same condition: the cost of the change.
 
 | axis | metric | baseline | steer 0.2 | steer 0.4 | steer 0.8 | prompt |
 |---|---|---|---|---|---|---|
-| simple | reading ease (higher = simpler) | 37 | 45 | 63 | **74** | 65 |
-| | facts | 30 | 30 | 30 | **30** | 23 |
-| concise | words per answer | 91 | 86 | 59 | 34 | 12 |
-| | facts | 30 | 29 | 30 | 25 | 30 |
-| calm (enthusiastic pole) | `!` per 100 words | 0.1 | 0.3 | 1.3 | 3.7 | 4.6 |
-| | facts | 30 | 29 | 30 | 28 | 29 |
-| cautious | hedge words per 100 words | 1.1 | 1.2 | 1.8 | 1.6 | 1.2 |
-| | facts | 30 | 29 | 30 | 21 | 30 |
+| concise | words per answer | 252* | 150 | 68 | 53 | 12 |
+| | facts | 30 | 30 | 30 | 25 | 30 |
+| simple | reading ease (higher = simpler) | 38 | 54 | 70 | **79** | 65 |
+| | facts | 30 | 30 | 30 | **30** | 28 |
+| calm (enthusiastic pole) | `!` per 100 words | 0.0 | 0.3 | 1.9 | **4.7** | 4.7 |
+| | facts | 30 | 30 | 30 | **30** | 29 |
+
+\* half the baseline answers hit the 400-token limit, so they're really longer.
+
+`python -m eval.judge`: warm and direct have nothing to count, so the same model, unsteered, compares each reply with
+the baseline reply to the same question, in both A/B orders. Share of wins on the axis, 50% = no difference:
+
+| axis | steer 0.2 | steer 0.4 | steer 0.8 | prompt |
+|---|---|---|---|---|
+| warm | 62% | 67% | 62% | 88% |
+| direct | 75% | 71% | 58% | 79% |
 
 What it shows:
-- **Simple, concise, calm and cautious move the intended way at almost no cost up to 0.4.** Past that it starts to
-  hurt. At 0.8
-  cautious doubts even plain facts ("the largest planet is a bit tricky to pinpoint"), and at 2.0 the model breaks.
-- **Simple: steering beats the prompt.** It's simpler than the prompted version and keeps every fact. Asking for
-  "plain everyday words" in the prompt costs 7 of 30.
-- **Prompting is stronger for format.** It's far shorter than steered concise. A "structured" (lists ↔ prose) axis
-  was dropped: steered answers lost their list markers only partly (57% → 27% list lines at 0.8, prompt 100%), and in
-  a chat the model keeps copying the format of its earlier replies.
-- **Middle layer is right.** On the concise vector (`python -m eval.layers`), layers 2–14 and 26–34 do almost nothing.
-  Layer 18 (the middle, used everywhere) and 22 do the work.
+- **Concise, simple and calm move the intended way with no fact lost up to 0.4.** At 0.8 concise loses 5 of 30, and
+  at 2.0 the model breaks. Several axes at once break it sooner (a reply drifted into Chinese at a combined 0.48), so
+  `MAX_PUSH` caps a reply at 0.35.
+- **Simple: steering beats the prompt.** Simpler than the prompted version, and every fact kept.
+- **Calm: steering matches the prompt** at 0.8, at no cost.
+- **Prompting is stronger for length:** 12 words against 53.
+- **Warm and direct work, less than the prompt.** The judge's other question, which answer is better, isn't usable:
+  it prefers the longer baseline even over the prompted answer (8-25%).
+- **Middle layer is right.** On the concise vector (`python -m eval.layers`), layer 18 (the middle, used everywhere)
+  cuts 252 words to 150 at 0.2 and layer 22 to 167. Layers 2-14 and 26-34 do almost nothing.
+- **Three axes were dropped.** Structured (lists ↔ prose): list lines went only from 57% to 27% at 0.8 (prompt 100%),
+  and in a chat the model copies the format of its earlier replies. Cautious: hedging barely moved (1.8 → 2.2 per 100
+  words) and cost 5 facts at 0.8. Accountable: no change up to 0.4 by the judge, and the opposite at 0.8.
 
-Warm, direct and accountable can't be measured by counting, so they need an LLM judge and aren't measured yet.
+`python -m eval.detector`, 160 hand-written messages never used for tuning (40 of them neutral):
+- exactly the right moods: 59% (always answering "neutral" gets 25%)
+- neutral messages kept neutral: 75%. A false mood stays in the steering state, so this one matters most.
+- "more detail": found 10/14, and right every time it was reported. "Shorter": found 6/6, but also reported on 24 other
+  messages, mostly hurried or angry ones.
+- the stronger of two versions of a message scored higher in 16/18 pairs
+
 Every reply behind these numbers is saved to `runs/` when you run the scripts.
 
 ## How it works
 
 Every turn:
-1. **Detect:** the model reads the latest message and lists the user's moods, each with an intensity
-   (frustrated 6/10 and rushed 8/10, …).
+1. **Detect:** the model answers two questions about the latest message: the user's moods, each with an intensity
+   (frustrated 6/10 and rushed 8/10, …), and how long the next answer should be (much shorter … much longer).
 2. **Remember:** a mood moves only the axes it lists, toward a target at its own speed:
    `state += intensity × speed × (target − state)`. Very rushed jumps straight to short answers, curious eases them
    a little, and a neutral message changes nothing.
@@ -68,9 +85,8 @@ Every turn:
    while the reply is generated. If the axes add up to more than `MAX_PUSH`, they shrink together for that reply.
 4. **Compare:** the same question is also answered without steering, side by side.
 
-The 7 steering axes (+ pole ↔ − pole): concise ↔ long · warm ↔ cold · calm ↔ enthusiastic ·
-simple ↔ technical · direct ↔ roundabout · cautious ↔ overconfident ·
-accountable ↔ defensive. Which mood pushes which axes is `MAPPING` in `config.py`.
+The 5 steering axes (+ pole ↔ − pole): concise ↔ long · warm ↔ cold · calm ↔ enthusiastic ·
+simple ↔ technical · direct ↔ roundabout. Which mood pushes which axes is `MAPPING` in `config.py`.
 
 Each vector is built with contrastive completions: the model answers the same questions in both poles
 (e.g. "answer in as few words as possible" vs "answer at great length"). The vector is the mean hidden state over the
@@ -85,18 +101,17 @@ python -m vectors.build --regen     # also rewrite the example answers with the 
 python -m vectors.tune              # each axis at strength 0.1/0.2/0.4/0.8 on one prompt, to pick config.STRENGTH
 python -m detector.build            # optional experimental mood probe (the default LLM detector needs nothing)
 
-python -m eval.steer                # the table above
+python -m eval.steer                # the first table above
 python -m eval.layers               # which layer steers best
-python -m eval.judge                # LLM judge: warm/direct/accountable, and the cost in answer quality
+python -m eval.judge                # LLM judge: warm and direct
 python -m eval.detector             # can the model read moods? scored on messages never used for tuning
 ```
 
 Another model: `MODEL_ID=... python -m vectors.build --regen`. The committed vectors only fit Qwen2.5-3B.
 Environment variables are read once, when `config` is first imported.
 
-How each axis is measured (`eval/steer.py`): concise → words ·
-simple → Flesch reading ease · calm → exclamation marks · cautious → hedge words, on questions with no sure answer
-(which are also what its vector is built from).
+How each axis is measured (`eval/steer.py`): concise → words · simple → Flesch reading ease · calm → exclamation
+marks.
 
 ## Knobs (`config.py`)
 
@@ -108,7 +123,7 @@ simple → Flesch reading ease · calm → exclamation marks · cautious → hed
 
 ## Code
 
-- `detector/detect.py`: mood detection (the model answers with JSON).
+- `detector/detect.py`: mood detection (moods as JSON, length as one letter).
 - `core/controller.py`: steering memory.
 - `core/model.py`: model loading, the steering hook (each row of a batch can be steered differently), generation.
 - `core/chat.py`: one turn.
